@@ -1,0 +1,17 @@
+{
+  "name": "@aegis/agent-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --env-file-if-exists=../../.env.local --import tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aegis/sdk": "0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
