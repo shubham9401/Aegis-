@@ -126,6 +126,23 @@ const actionRequest: AgentRequest = {
   currency: plan.proposedAction.currency,
   service: plan.proposedAction.service,
 };
+
+const overBudgetRequest: AgentRequest = {
+  ...actionRequest,
+  requestId: crypto.randomUUID(),
+  amountMinor: 60_000n,
+};
+let overBudgetExecuted = false;
+const overBudgetResult = await aegis.executeAction(
+  overBudgetRequest,
+  async () => {
+    overBudgetExecuted = true;
+    return "This must never execute";
+  },
+);
+console.log("Over-budget booking ($600 against a $500 limit):", overBudgetResult);
+console.log("Over-budget action executed:", overBudgetExecuted);
+
 const bookingResult = await aegis.executeAction(
   actionRequest,
   async () => "Booking executed",

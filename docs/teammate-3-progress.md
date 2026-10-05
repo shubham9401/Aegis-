@@ -12,6 +12,8 @@
 - [x] Connect the SDK enforcement boundary to Teammate 2's web API and encrypted demo vault.
 - [ ] Replace Teammate 2's labeled mock approval with the real Mera passkey ceremony and server verification.
 - [x] Define SDK request and result types.
+- [x] Add developer-facing `checkPermission()`, context-release, approval-request, and approval-polling APIs.
+- [x] Fail closed when a money-constrained action omits its amount.
 - [x] Implement deterministic permission evaluation with a local adapter.
 - [x] Create narrowed delegated permissions and recheck parent chains for revocation and expiry.
 - [x] Gate local data reads and action execution on permission decisions; deny by default when passkey approval is unavailable.
@@ -21,6 +23,7 @@
 - [ ] Replace the server-held demo vault key with a user-controlled key-release mechanism.
 - [ ] Add ERC-8004 identity verification and the real passkey approval adapter.
 - [x] Build the first command-line travel-agent permission demo.
+- [x] Demonstrate an explicit over-budget booking denial without executing the action.
 - [x] Add a Kimi planner with schema validation and local fallback.
 - [ ] Move the Kimi call behind the web app's server-side API route when Teammate 2's app exists.
 - [ ] Run the Kimi planner with a newly generated, unexposed key stored only in `.env.local`.

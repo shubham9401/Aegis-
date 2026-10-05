@@ -187,3 +187,28 @@ test("sensitive actions stay blocked until an approval adapter confirms", async 
   assert.equal(approved.result, "booked");
   assert.equal(executions, 1);
 });
+
+test("amount-constrained actions fail closed when the amount is missing", async () => {
+  const parent = parentPermission();
+  const aegis = new AegisClient({
+    store: new MemoryPermissionStore([parent]),
+    now: () => now,
+  });
+
+  const decision = await aegis.checkPermission({
+    requestId: crypto.randomUUID(),
+    user,
+    agentId: parent.agentId,
+    requestedAt: now,
+    kind: "action",
+    action: "travel:book",
+    currency: "USD",
+    service: "demo-airline",
+  });
+
+  assert.deepEqual(decision, {
+    outcome: "deny",
+    reason: "AMOUNT_REQUIRED",
+    permissionId: parent.permissionId,
+  });
+});

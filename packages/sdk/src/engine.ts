@@ -62,6 +62,11 @@ export class AegisClient {
     return this.#checkAction(permission.permissionId, request, rule);
   }
 
+  /** Developer-facing alias that makes the SDK's intent explicit. */
+  async checkPermission(request: AgentRequest): Promise<PermissionDecision> {
+    return this.check(request);
+  }
+
   /**
    * Enforce the check at the data-release boundary. The callback should be a
    * user-controlled vault/key holder and must not release data on its own.
@@ -181,6 +186,13 @@ export class AegisClient {
     request: ActionRequest,
     rule: ActionRule,
   ): PermissionDecision {
+    if (
+      request.amountMinor === undefined &&
+      (rule.maxAmountMinor !== undefined || rule.requireApprovalAboveMinor !== undefined)
+    ) {
+      return { outcome: "deny", reason: "AMOUNT_REQUIRED", permissionId };
+    }
+
     if (
       rule.allowedServices &&
       (!request.service || !rule.allowedServices.includes(request.service))
