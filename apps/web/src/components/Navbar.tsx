@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { Icon, type IconName } from "@/components/Icon";
 
-const navLinks = [
-  { href: "/", label: "Connect", icon: "🔑" },
-  { href: "/data", label: "Data Vault", icon: "🔒" },
-  { href: "/permissions", label: "Permissions", icon: "🛡️" },
-  { href: "/approvals", label: "Approvals", icon: "✅" },
-  { href: "/activity", label: "Activity", icon: "📊" },
+const navLinks: Array<{ href: string; label: string; icon: IconName }> = [
+  { href: "/", label: "Overview", icon: "shield" },
+  { href: "/data", label: "Vault", icon: "database" },
+  { href: "/permissions", label: "Policies", icon: "sliders" },
+  { href: "/approvals", label: "Approvals", icon: "check" },
+  { href: "/activity", label: "Activity", icon: "activity" },
 ];
 
 export default function Navbar() {
@@ -18,57 +19,42 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
-          {/* Logo */}
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{
-              fontSize: 24,
-              background: "linear-gradient(135deg, var(--aegis-primary), var(--aegis-accent))",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontWeight: 800,
-              letterSpacing: "-0.5px",
-            }}>
-              ⛨ Aegis
+      <div className="nav-shell">
+        <div className="nav-row">
+          <Link href="/" className="brand" aria-label="Aegis overview">
+            <span className="brand-mark"><Icon name="shield" size={20} /></span>
+            <span className="brand-copy">
+              <strong>Aegis</strong>
+              <small>Agent control plane</small>
             </span>
           </Link>
 
-          {/* Nav Links */}
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="nav-links" aria-label="Primary navigation">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={`nav-link ${pathname === link.href ? "active" : ""}`}
               >
-                <span style={{ marginRight: 4 }}>{link.icon}</span>
+                <Icon name={link.icon} size={16} />
                 {link.label}
               </Link>
             ))}
           </div>
 
-          {/* User Info */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="nav-account">
             {isConnected && address ? (
               <>
-                <span style={{
-                  fontSize: 12,
-                  color: "var(--text-muted)",
-                  fontFamily: "monospace",
-                  padding: "4px 10px",
-                  background: "var(--bg-secondary)",
-                  borderRadius: 8,
-                  border: "1px solid var(--border-color)",
-                }}>
+                <span className="connection-dot" aria-label="Connected" />
+                <span className="address-chip">
                   {address.slice(0, 6)}…{address.slice(-4)}
                 </span>
-                <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }} onClick={disconnect}>
-                  Sign Out
+                <button className="nav-signout" onClick={disconnect}>
+                  Disconnect
                 </button>
               </>
             ) : (
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Not connected</span>
+              <span className="address-chip">Offline</span>
             )}
           </div>
         </div>
