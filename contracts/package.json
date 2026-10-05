@@ -1,0 +1,18 @@
+{
+  "name": "@aegis/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Aegis permission delegation and enforced token spending on Monad testnet",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "compile": "node scripts/compile.mjs",
+    "test": "node test/permissions.test.mjs",
+    "demo": "node scripts/demo.mjs",
+    "preflight": "node --env-file-if-exists=.env scripts/deploy.mjs --preflight",
+    "deploy:testnet": "node --env-file-if-exists=.env scripts/deploy.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "@openzeppelin/contracts": "5.4.0", "ethers": "6.15.0" },
+  "devDependencies": { "ganache": "7.9.2", "solc": "0.8.28", "typescript": "5.9.3", "@types/node": "22.18.6" }
+}

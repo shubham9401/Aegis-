@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-02T13:43:39.195Z",
+  "chainId": 10143,
+  "blockNumber": 67558088,
+  "registryAddress": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "registryBytecodePresent": true,
+  "registrySupportsERC721": true,
+  "registrySource": "https://github.com/erc-8004/erc-8004-contracts#monad-testnet",
+  "deployerAddress": null,
+  "deployerBalanceMON": null,
+  "aegisDeployedByThisCheck": false
+}

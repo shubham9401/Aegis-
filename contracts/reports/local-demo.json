@@ -1,0 +1,50 @@
+{
+  "executedAt": "2026-10-02T13:44:01.396Z",
+  "network": "in-memory local EVM",
+  "chainId": 31337,
+  "deploymentStatus": "NOT deployed to Monad testnet",
+  "authentication": "Local test signers; passkey UI is teammate 2 work",
+  "data": "Synthetic scope only; gateway/encryption implementation is teammate 2/3 work",
+  "steps": [
+    {
+      "step": "User grants agent A 500 test USD allowance",
+      "result": "permission 1"
+    },
+    {
+      "step": "A delegates diet, destination and 100 test USD to B",
+      "result": "permission 2"
+    },
+    {
+      "step": "B requests dietary preference",
+      "result": "AUTHORIZED; no private data stored or decrypted by this contract"
+    },
+    {
+      "step": "B requests itinerary",
+      "result": "DENIED: ActionNotAllowed"
+    },
+    {
+      "step": "B attempts 101 test USD payment",
+      "result": "REVERTED on local EVM"
+    },
+    {
+      "step": "B pays 80 test USD",
+      "result": "TRANSFERRED; remaining automatic allowance A=420, B=20"
+    },
+    {
+      "step": "Owner approves one extra 650 test USD payment",
+      "result": "TRANSFERRED once; automatic allowances remain A=420, B=20"
+    },
+    {
+      "step": "B replays approved payment",
+      "result": "REVERTED on local EVM"
+    },
+    {
+      "step": "User revokes A; B repeats dietary request",
+      "result": "DENIED: Revoked"
+    },
+    {
+      "step": "B pays after parent revocation",
+      "result": "REVERTED on local EVM"
+    }
+  ]
+}
