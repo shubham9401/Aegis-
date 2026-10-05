@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency, formatExpiry, timeRemaining } from "@/lib/utils";
+import { ConnectionGate } from "@/components/ConnectionGate";
+import { Icon } from "@/components/Icon";
 
 interface ApprovalRequest {
   approvalId: string;
@@ -123,11 +125,11 @@ export default function ApprovalsPage() {
 
   if (!isConnected) {
     return (
-      <div className="page-container" style={{ textAlign: "center", paddingTop: 80 }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Connect to view approvals</h2>
-        <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Sign in to see and decide on agent approval requests.</p>
-      </div>
+      <ConnectionGate
+        icon="check"
+        title="Review step-up approvals"
+        description="Connect a passkey session to inspect sensitive agent requests and make an explicit decision."
+      />
     );
   }
 
@@ -152,11 +154,11 @@ export default function ApprovalsPage() {
 
       <div className="glass-card" style={{ padding: 24 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600 }}>Approval Requests</h3>
+          <h3 className="panel-title no-margin"><Icon name="check" size={17} /> Approval requests</h3>
           <div style={{ display: "flex", gap: 8 }}>
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Auto-refreshing every 5s</span>
             <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={loadApprovals}>
-              ↻
+              <Icon name="refresh" size={14} />
             </button>
           </div>
         </div>
@@ -168,8 +170,8 @@ export default function ApprovalsPage() {
             ))}
           </div>
         ) : approvals.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+          <div className="empty-state">
+            <div className="empty-state-icon"><Icon name="check" size={21} /></div>
             <p>No approval requests yet</p>
             <p style={{ fontSize: 12, marginTop: 4 }}>When an agent requests an action that exceeds your approval threshold, it will appear here.</p>
           </div>
@@ -194,7 +196,7 @@ export default function ApprovalsPage() {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 500 }}>
-                      {a.request.action === "travel:book" ? "✈️" : "🔍"} {a.request.action}
+                      {a.request.action}
                     </span>
                     <span className={`badge badge-${a.result.outcome === "pending" ? (expired ? "expired" : "pending") : a.result.outcome}`}>
                       {a.result.outcome === "pending"
@@ -248,7 +250,7 @@ export default function ApprovalsPage() {
       {selectedApproval && (
         <div className="modal-overlay" onClick={() => setSelectedApproval(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>⚡ Action Approval</h3>
+            <h3 className="panel-title"><Icon name="key" size={18} /> Action approval</h3>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>
               Review the details below carefully. This build uses a clearly labeled mock signature until the Mera passkey adapter is connected.
             </p>

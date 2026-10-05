@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatExpiry, reasonMessage } from "@/lib/utils";
+import { ConnectionGate } from "@/components/ConnectionGate";
+import { Icon, type IconName } from "@/components/Icon";
 
 interface ActivityEntry {
   id: string;
@@ -18,16 +20,16 @@ interface ActivityEntry {
   amountMinor?: string;
 }
 
-const typeConfig: Record<string, { icon: string; label: string; css: string }> = {
-  permission_created: { icon: "🛡️", label: "Permission Created", css: "created" },
-  permission_revoked: { icon: "🚫", label: "Permission Revoked", css: "revoked" },
-  data_released: { icon: "📤", label: "Data Released", css: "allowed" },
-  data_denied: { icon: "🔒", label: "Data Denied", css: "denied" },
-  action_allowed: { icon: "✅", label: "Action Allowed", css: "allowed" },
-  action_denied: { icon: "❌", label: "Action Denied", css: "denied" },
-  action_approval_required: { icon: "⏳", label: "Approval Required", css: "approval" },
-  approval_approved: { icon: "✍️", label: "Approved", css: "allowed" },
-  approval_rejected: { icon: "✕", label: "Rejected", css: "denied" },
+const typeConfig: Record<string, { icon: IconName; label: string; css: string }> = {
+  permission_created: { icon: "shield", label: "Permission Created", css: "created" },
+  permission_revoked: { icon: "lock", label: "Permission Revoked", css: "revoked" },
+  data_released: { icon: "database", label: "Data Released", css: "allowed" },
+  data_denied: { icon: "lock", label: "Data Denied", css: "denied" },
+  action_allowed: { icon: "check", label: "Action Allowed", css: "allowed" },
+  action_denied: { icon: "lock", label: "Action Denied", css: "denied" },
+  action_approval_required: { icon: "key", label: "Approval Required", css: "approval" },
+  approval_approved: { icon: "check", label: "Approved", css: "allowed" },
+  approval_rejected: { icon: "lock", label: "Rejected", css: "denied" },
 };
 
 export default function ActivityPage() {
@@ -63,13 +65,11 @@ export default function ActivityPage() {
 
   if (!isConnected) {
     return (
-      <div className="page-container" style={{ textAlign: "center", paddingTop: 80 }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Connect to view activity</h2>
-        <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-          Sign in with a passkey to see your permission and access history.
-        </p>
-      </div>
+      <ConnectionGate
+        icon="activity"
+        title="Inspect the decision history"
+        description="Connect a passkey session to review permission changes, releases, denials, and revocations."
+      />
     );
   }
 
@@ -92,7 +92,7 @@ export default function ActivityPage() {
               style={{ padding: "4px 10px", fontSize: 12 }}
               onClick={loadActivity}
             >
-              ↻
+              <Icon name="refresh" size={14} />
             </button>
           </div>
         </div>
@@ -104,8 +104,8 @@ export default function ActivityPage() {
             ))}
           </div>
         ) : activity.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)" }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+          <div className="empty-state roomy">
+            <div className="empty-state-icon"><Icon name="activity" size={21} /></div>
             <p style={{ fontSize: 14 }}>No activity yet</p>
             <p style={{ fontSize: 12, marginTop: 4 }}>
               Grant a permission, store some data, or trigger an agent request to see events here.
@@ -115,13 +115,13 @@ export default function ActivityPage() {
           <div>
             {activity.map((entry) => {
               const config = typeConfig[entry.type] ?? {
-                icon: "•",
+                icon: "activity" as IconName,
                 label: entry.type,
                 css: "created",
               };
               return (
                 <div key={entry.id} className="activity-item">
-                  <div className={`activity-icon ${config.css}`}>{config.icon}</div>
+                  <div className={`activity-icon ${config.css}`}><Icon name={config.icon} size={17} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                       <span style={{ fontSize: 14, fontWeight: 500 }}>{config.label}</span>

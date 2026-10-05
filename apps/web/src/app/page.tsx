@@ -1,175 +1,159 @@
 "use client";
 
+import Link from "next/link";
+import { Icon, type IconName } from "@/components/Icon";
 import { useAuth } from "@/contexts/AuthContext";
+
+const capabilities: Array<{
+  icon: IconName;
+  title: string;
+  eyebrow: string;
+  description: string;
+}> = [
+  {
+    icon: "database",
+    title: "Context vault",
+    eyebrow: "Private by default",
+    description: "Encrypted user context is released field by field only after a live policy check.",
+  },
+  {
+    icon: "sliders",
+    title: "Granular policies",
+    eyebrow: "Least privilege",
+    description: "Constrain data scopes, services, actions, limits, expiry, and delegated authority.",
+  },
+  {
+    icon: "key",
+    title: "Step-up approval",
+    eyebrow: "Human in the loop",
+    description: "Hold sensitive actions until the permission owner explicitly approves the request.",
+  },
+  {
+    icon: "activity",
+    title: "Auditable decisions",
+    eyebrow: "Clear provenance",
+    description: "Review grants, releases, denials, approvals, and revocations from one activity trail.",
+  },
+];
 
 export default function HomePage() {
   const { isConnected, address, balance, isLoading, error, connect, disconnect, refreshBalance } = useAuth();
 
   return (
-    <div className="page-container">
-      {/* Hero Section */}
-      <div className="hero-gradient" style={{ padding: "48px 40px", marginBottom: 40, textAlign: "center" }}>
-        <div className="shield-icon" style={{ margin: "0 auto 24px" }}>
-          🛡️
-        </div>
-        <h1 style={{
-          fontSize: 42,
-          fontWeight: 800,
-          marginBottom: 12,
-          background: "linear-gradient(135deg, #f1f5f9, #818cf8)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-        }}>
-          Aegis
-        </h1>
-        <p style={{ fontSize: 18, color: "var(--text-secondary)", maxWidth: 600, margin: "0 auto 8px" }}>
-          User-controlled trust and permission layer for AI agents on Monad
-        </p>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 500, margin: "0 auto" }}>
-          Grant narrow, revocable permissions for data access and actions. Your private context stays encrypted off-chain.
-        </p>
-      </div>
-
-      {/* Connect Card */}
-      <div className="glass-card" style={{ maxWidth: 480, margin: "0 auto", padding: 32 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>
-          {isConnected ? "Connected" : "Connect with Passkey"}
-        </h2>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>
-          {isConnected
-            ? "Your session is active. Manage permissions and data."
-            : "Sign in with a passkey — no seed phrase needed."}
-        </p>
-
-        {error && (
-          <div style={{
-            padding: "12px 16px",
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "1px solid rgba(239, 68, 68, 0.2)",
-            borderRadius: 10,
-            marginBottom: 16,
-            fontSize: 13,
-            color: "#f87171",
-          }}>
-            ⚠️ {error}
-          </div>
-        )}
-
-        {isConnected && address ? (
-          <div>
-            {/* Address */}
-            <div style={{
-              padding: "16px 20px",
-              background: "var(--bg-secondary)",
-              borderRadius: 12,
-              marginBottom: 16,
-              border: "1px solid var(--border-color)",
-            }}>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
-                Address
-              </div>
-              <div style={{ fontFamily: "monospace", fontSize: 14, color: "var(--aegis-primary-light)", wordBreak: "break-all" }}>
-                {address}
-              </div>
-            </div>
-
-            {/* Balance */}
-            <div style={{
-              padding: "16px 20px",
-              background: "var(--bg-secondary)",
-              borderRadius: 12,
-              marginBottom: 16,
-              border: "1px solid var(--border-color)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}>
-              <div>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
-                  MON Balance
-                </div>
-                <div style={{ fontSize: 20, fontWeight: 600 }}>
-                  {balance ?? <span className="animate-pulse">Loading…</span>}
-                  <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 6 }}>MON</span>
-                </div>
-              </div>
-              <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }} onClick={refreshBalance}>
-                ↻ Refresh
+    <div className="page-container home-page">
+      <section className="home-hero">
+        <div className="hero-copy">
+          <div className="eyebrow"><span className="eyebrow-dot" />Trust infrastructure for autonomous agents</div>
+          <h1>Control what agents know.<br /><span>Enforce what they can do.</span></h1>
+          <p className="hero-lead">
+            Aegis is a user-owned permission and enforcement layer for AI agents on Monad—built for narrow context access, bounded actions, and safe delegation.
+          </p>
+          <div className="hero-actions">
+            {isConnected ? (
+              <Link href="/permissions" className="btn btn-primary">
+                Manage policies <Icon name="arrow" size={16} />
+              </Link>
+            ) : (
+              <button className="btn btn-primary" onClick={connect} disabled={isLoading}>
+                <Icon name="key" size={17} />
+                {isLoading ? "Creating session…" : "Connect with passkey"}
               </button>
-            </div>
-
-            {/* No balance warning */}
-            {balance !== null && parseFloat(balance) === 0 && (
-              <div style={{
-                padding: "12px 16px",
-                background: "rgba(245, 158, 11, 0.1)",
-                border: "1px solid rgba(245, 158, 11, 0.2)",
-                borderRadius: 10,
-                marginBottom: 16,
-                fontSize: 13,
-                color: "#fbbf24",
-              }}>
-                ⚡ You need MON for gas.{" "}
-                <a
-                  href="https://faucet.monad.xyz"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: "var(--aegis-accent-light)", textDecoration: "underline" }}
-                >
-                  Get testnet MON from the faucet →
-                </a>
-              </div>
             )}
+            <Link href="/activity" className="btn btn-ghost">View audit trail</Link>
+          </div>
+          <div className="hero-proof">
+            <span className="proof-item"><Icon name="shield" size={15} /> Live policy checks</span>
+            <span className="proof-item"><Icon name="lock" size={15} /> Encrypted off-chain context</span>
+            <span className="proof-item"><Icon name="network" size={15} /> Delegation aware</span>
+          </div>
+        </div>
 
-            {/* Actions */}
-            <div style={{ display: "flex", gap: 12 }}>
-              <button className="btn btn-danger" style={{ flex: 1 }} onClick={disconnect}>
-                Sign Out
+        <aside className="session-panel" aria-label="Current session">
+          <div className="panel-heading">
+            <div>
+              <span className="panel-kicker">Control plane</span>
+              <h2>{isConnected ? "Session active" : "Start a session"}</h2>
+            </div>
+            <span className={`status-indicator ${isConnected ? "online" : "offline"}`}>
+              <span className="status-dot" />{isConnected ? "Connected" : "Offline"}
+            </span>
+          </div>
+
+          {error ? <div className="alert alert-error">{error}</div> : null}
+
+          {isConnected && address ? (
+            <div className="session-content">
+              <div className="session-metric">
+                <span>Account</span>
+                <strong className="mono">{address.slice(0, 10)}…{address.slice(-8)}</strong>
+              </div>
+              <div className="session-metric balance-metric">
+                <span>Monad testnet balance</span>
+                <div>
+                  <strong>{balance ?? "—"}</strong><small> MON</small>
+                </div>
+              </div>
+              <div className="session-actions">
+                <button className="btn btn-ghost" onClick={refreshBalance}>
+                  <Icon name="refresh" size={15} /> Refresh
+                </button>
+                <button className="btn btn-danger-subtle" onClick={disconnect}>Disconnect</button>
+              </div>
+              <div className="session-note">
+                <Icon name="shield" size={15} />
+                <p>
+                <span>Demo</span>
+                Simulated passkey session until the Mera adapter is connected.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="session-content">
+              <div className="session-illustration">
+                <span><Icon name="key" size={24} /></span>
+                <div className="session-line" />
+                <span><Icon name="shield" size={24} /></span>
+                <div className="session-line" />
+                <span><Icon name="check" size={24} /></span>
+              </div>
+              <p className="session-description">Create a local demo session to configure policy boundaries and inspect the complete decision flow.</p>
+              <button className="btn btn-primary btn-block" onClick={connect} disabled={isLoading}>
+                {isLoading ? "Creating session…" : "Connect with passkey"}
               </button>
             </div>
+          )}
+        </aside>
+      </section>
 
-            {/* Demo Notice */}
-            <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 16, textAlign: "center" }}>
-              Demo mode: simulated passkey. Real Mera passkey integration requires HTTPS + PRF-capable browser.
-            </p>
-          </div>
-        ) : (
+      <section className="decision-flow" aria-label="Aegis enforcement flow">
+        <div className="flow-intro">
+          <span className="section-label">Request lifecycle</span>
+          <strong>One decision boundary.<br />Every agent request.</strong>
+        </div>
+        <div className="flow-step"><span>01</span><Icon name="network" /><div><small>Identify</small><strong>Verify the agent</strong></div></div>
+        <div className="flow-step"><span>02</span><Icon name="sliders" /><div><small>Evaluate</small><strong>Check live policy</strong></div></div>
+        <div className="flow-step"><span>03</span><Icon name="check" /><div><small>Enforce</small><strong>Release or block</strong></div></div>
+      </section>
+
+      <section className="capability-section">
+        <div className="section-heading">
           <div>
-            <button
-              className="btn btn-primary"
-              style={{ width: "100%", padding: "14px 20px", fontSize: 16 }}
-              onClick={connect}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="animate-pulse">Connecting…</span>
-              ) : (
-                <>🔐 Create Passkey / Sign In</>
-              )}
-            </button>
-
-            <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 16, textAlign: "center" }}>
-              Requires HTTPS or localhost. Desktop Chrome with Google Password Manager recommended for WebAuthn PRF support.
-            </p>
+            <span className="section-label">Built for enforceable trust</span>
+            <h2>Permission records are not enough.<br />Aegis enforces the boundary.</h2>
           </div>
-        )}
-      </div>
-
-      {/* Feature Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginTop: 48 }}>
-        {[
-          { icon: "🔒", title: "Encrypted Vault", desc: "Your data stays encrypted at rest. Plaintext only released after permission check." },
-          { icon: "🛡️", title: "Granular Permissions", desc: "Control which data and actions each agent can access, with spending limits." },
-          { icon: "✍️", title: "Passkey Approvals", desc: "Sensitive actions require your explicit approval with a passkey signature." },
-          { icon: "🔍", title: "Full Audit Trail", desc: "Every access, denial, and revocation is logged for transparency." },
-        ].map((f) => (
-          <div key={f.title} className="glass-card" style={{ padding: 24 }}>
-            <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
-            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>{f.title}</h3>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>{f.desc}</p>
-          </div>
-        ))}
-      </div>
+          <p>Policy checks happen where private context is decrypted and where sensitive actions execute—not merely where permissions are recorded.</p>
+        </div>
+        <div className="capability-grid">
+          {capabilities.map((capability) => (
+            <article key={capability.title} className="capability-card">
+              <div className="capability-icon"><Icon name={capability.icon} size={20} /></div>
+              <span>{capability.eyebrow}</span>
+              <h3>{capability.title}</h3>
+              <p>{capability.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

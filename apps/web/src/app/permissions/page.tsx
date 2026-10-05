@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency, formatExpiry, timeRemaining } from "@/lib/utils";
+import { ConnectionGate } from "@/components/ConnectionGate";
+import { Icon } from "@/components/Icon";
 
 const AVAILABLE_SCOPES = [
   "profile:dietary-preference",
@@ -155,11 +157,11 @@ export default function PermissionsPage() {
 
   if (!isConnected) {
     return (
-      <div className="page-container" style={{ textAlign: "center", paddingTop: 80 }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🛡️</div>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Connect to manage permissions</h2>
-        <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Sign in with a passkey to grant and manage agent permissions.</p>
-      </div>
+      <ConnectionGate
+        icon="sliders"
+        title="Open your policy workspace"
+        description="Connect a passkey session to grant, inspect, and revoke bounded permissions for registered agents."
+      />
     );
   }
 
@@ -182,10 +184,10 @@ export default function PermissionsPage() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+      <div className="workspace-grid">
         {/* Grant Form */}
         <div className="glass-card" style={{ padding: 24 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Grant Permission</h3>
+          <h3 className="panel-title"><Icon name="shield" size={17} /> Grant permission</h3>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
@@ -197,14 +199,16 @@ export default function PermissionsPage() {
               <label className="label">Data Scopes</label>
               <div className="checkbox-group">
                 {AVAILABLE_SCOPES.map((scope) => (
-                  <div
+                  <button
+                    type="button"
                     key={scope}
                     className={`checkbox-label ${selectedScopes.includes(scope) ? "checked" : ""}`}
                     onClick={() => toggleScope(scope)}
+                    aria-pressed={selectedScopes.includes(scope)}
                   >
-                    <span>{selectedScopes.includes(scope) ? "☑" : "☐"}</span>
+                    <span className="check-box">{selectedScopes.includes(scope) ? <Icon name="check" size={12} /> : null}</span>
                     {scope.split(":")[1]}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -218,7 +222,7 @@ export default function PermissionsPage() {
               </select>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="form-grid-2">
               <div>
                 <label className="label">Max Amount ($)</label>
                 <input className="input" type="number" step="0.01" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} />
@@ -229,7 +233,7 @@ export default function PermissionsPage() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="form-grid-2">
               <div>
                 <label className="label">Currency</label>
                 <input className="input" value={currency} onChange={(e) => setCurrency(e.target.value)} />
@@ -246,7 +250,7 @@ export default function PermissionsPage() {
             </div>
 
             <button className="btn btn-primary" onClick={handleGrant} disabled={granting || selectedScopes.length === 0}>
-              {granting ? <span className="animate-pulse">Granting…</span> : "🛡️ Grant Permission"}
+              {granting ? <span className="animate-pulse">Granting…</span> : <><Icon name="shield" size={16} /> Grant Permission</>}
             </button>
           </div>
         </div>
@@ -254,9 +258,9 @@ export default function PermissionsPage() {
         {/* Permission List */}
         <div className="glass-card" style={{ padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600 }}>Active Permissions</h3>
+            <h3 className="panel-title no-margin"><Icon name="sliders" size={17} /> Active permissions</h3>
             <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={loadPermissions}>
-              ↻ Refresh
+              <Icon name="refresh" size={14} /> Refresh
             </button>
           </div>
 
@@ -267,8 +271,8 @@ export default function PermissionsPage() {
               ))}
             </div>
           ) : permissions.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
+            <div className="empty-state">
+              <div className="empty-state-icon"><Icon name="sliders" size={21} /></div>
               <p>No permissions granted yet</p>
             </div>
           ) : (

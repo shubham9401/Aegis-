@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ConnectionGate } from "@/components/ConnectionGate";
+import { Icon } from "@/components/Icon";
 
 const DATA_SCOPES = [
   { scope: "profile:dietary-preference", label: "Dietary Preference", placeholder: "e.g., vegetarian, vegan, halal" },
@@ -81,11 +83,11 @@ export default function DataVaultPage() {
 
   if (!isConnected) {
     return (
-      <div className="page-container" style={{ textAlign: "center", paddingTop: 80 }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Connect to manage your data</h2>
-        <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Sign in with a passkey to store and manage your encrypted data.</p>
-      </div>
+      <ConnectionGate
+        icon="database"
+        title="Unlock your private context vault"
+        description="Connect a passkey session to encrypt, store, and manage the context fields agents may request."
+      />
     );
   }
 
@@ -99,8 +101,8 @@ export default function DataVaultPage() {
 
       {/* Vault Status */}
       <div className="glass-card" style={{ padding: 24, marginBottom: 24 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16, color: "var(--text-secondary)" }}>
-          📦 Stored Data
+        <h3 className="panel-title">
+          <Icon name="database" size={17} /> Stored data
         </h3>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           {DATA_SCOPES.map((d) => (
@@ -115,7 +117,9 @@ export default function DataVaultPage() {
                 color: stored[d.scope] ? "#34d399" : "var(--text-muted)",
               }}
             >
-              {stored[d.scope] ? "✓" : "○"} {d.label}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Icon name={stored[d.scope] ? "check" : "lock"} size={13} /> {d.label}
+              </span>
             </div>
           ))}
         </div>
@@ -123,8 +127,8 @@ export default function DataVaultPage() {
 
       {/* Edit Form */}
       <div className="glass-card" style={{ padding: 24 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 20, color: "var(--text-secondary)" }}>
-          ✏️ Edit Sample Facts
+        <h3 className="panel-title">
+          <Icon name="sliders" size={17} /> Edit sample facts
         </h3>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -167,7 +171,7 @@ export default function DataVaultPage() {
           onClick={handleSave}
           disabled={saving}
         >
-          {saving ? <span className="animate-pulse">Encrypting & Saving…</span> : "🔐 Encrypt & Save"}
+          {saving ? <span className="animate-pulse">Encrypting & Saving…</span> : <><Icon name="lock" size={16} /> Encrypt & Save</>}
         </button>
 
         <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 12, textAlign: "center" }}>
