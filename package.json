@@ -11,6 +11,7 @@
     "build": "npm run build --workspace @aegis/sdk && npm run build --workspace @aegis/agent-demo && npm run build --workspace @aegis/web",
     "dev:web": "npm run build --workspace @aegis/sdk && npm run dev --workspace @aegis/web",
     "demo": "npm run dev --workspace @aegis/agent-demo",
+    "demo:web": "npm run build --workspace @aegis/sdk && npm run dev:web --workspace @aegis/agent-demo",
     "typecheck": "npm run build --workspace @aegis/sdk && npm run typecheck --workspaces --if-present",
     "test": "npm run build --workspace @aegis/sdk && npm run build --workspace @aegis/agent-demo && node --test packages/sdk/test/*.test.mjs"
   },

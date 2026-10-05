@@ -10,6 +10,7 @@
 
 - [ ] Confirm contract methods, permission fields, and events with Teammate 1.
 - [x] Connect the SDK enforcement boundary to Teammate 2's web API and encrypted demo vault.
+- [x] Add a connected agent-app demo that requests scoped context and waits for a dashboard approval.
 - [ ] Replace Teammate 2's labeled mock approval with the real Mera passkey ceremony and server verification.
 - [x] Define SDK request and result types.
 - [x] Add developer-facing `checkPermission()`, context-release, approval-request, and approval-polling APIs.
