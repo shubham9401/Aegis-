@@ -1,4 +1,5 @@
 export { AegisClient, type AegisClientOptions } from "./engine.js";
+export { createDelegatedPermission, type DelegatedPermissionInput } from "./delegation.js";
 export { MemoryPermissionStore } from "./memory-store.js";
 export type {
   ActionRequest,

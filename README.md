@@ -12,7 +12,7 @@ Aegis is a user-controlled trust and permission layer for AI agents. It lets use
 
 ## Build status
 
-Block 1 is complete: the TypeScript workspace, core SDK types, deterministic permission engine, local permission adapter, and command-line travel-agent demo are working. The Monad contract adapter, Kimi integration, passkey approval handoff, and Envio indexer remain to be built.
+The TypeScript workspace, permission engine, local permission adapter, and command-line travel-agent demo are working. The SDK now demonstrates narrowed agent-to-agent delegation, parent-revocation checks, permission-gated data reads, and action execution that fails closed when required approval is missing. The demo's data source is still an in-memory stand-in—not encrypted storage—and permissions are still local, not read from Monad.
 
 ## Run locally
 
@@ -22,12 +22,14 @@ npm run build
 npm run demo
 ```
 
-The demo prints four decisions: allowed data access, an action requiring approval, an over-limit denial, and a denial after revocation.
+The demo shows the primary agent reading only granted fields, a helper agent searching under a narrower delegated permission, that helper being denied access to the travel budget, a booking held for passkey approval, and the helper being blocked after the parent permission is revoked.
 
 Without `KIMI_API_KEY`, the demo uses a deterministic local planner. To enable Kimi, copy `.env.example` to `.env.local`, insert a newly generated Kimi Open Platform key, and run `npm run demo`. Never commit or share the key.
 
 If Kimi is unavailable because of balance, authentication, or network problems, the demo reports the failure and continues with the labeled local planner. This fallback keeps the Aegis permission demonstration usable, but it does not qualify as a live Kimi bounty integration.
 
+The Kimi planner is a planning component only; Aegis independently checks its requested data and actions. The SDK tests can be run with `npm test`.
+
 ## First integration decisions
 
-Before implementing the SDK, agree on the permission contract's public methods and event fields with Teammate 1. Agree with Teammate 2 on how the app requests and returns passkey approval. Record those interfaces in `docs/` so all three parts can integrate against the same contract.
+Before connecting the SDK to the chain, agree on permission IDs, parent links, revocation lookup, public methods, and events with Teammate 1. Agree with Teammate 2 on how the app requests and returns passkey approval. The remaining privacy integration is a user-controlled encrypted vault/key-release adapter: the SDK gate demonstrates the required check-before-release order, but does not itself encrypt or manage keys.

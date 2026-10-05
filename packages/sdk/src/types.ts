@@ -20,6 +20,9 @@ export interface AgentPermission {
   permissionId: string;
   user: Address;
   agentId: string;
+  /** Parent grant for an attenuated agent-to-agent delegation. */
+  parentPermissionId?: string;
+  parentAgentId?: string;
   dataScopes: readonly DataScope[];
   actionRules: readonly ActionRule[];
   expiresAt: number;
@@ -52,6 +55,11 @@ export type DecisionReason =
   | "PERMISSION_NOT_FOUND"
   | "PERMISSION_REVOKED"
   | "PERMISSION_EXPIRED"
+  | "PARENT_PERMISSION_NOT_FOUND"
+  | "PARENT_PERMISSION_REVOKED"
+  | "PARENT_PERMISSION_EXPIRED"
+  | "DELEGATION_EXCEEDS_PARENT"
+  | "PERMISSION_CHAIN_INVALID"
   | "DATA_SCOPE_NOT_GRANTED"
   | "ACTION_NOT_GRANTED"
   | "SERVICE_NOT_ALLOWED"
@@ -79,4 +87,5 @@ export type PermissionDecision =
 
 export interface PermissionStore {
   getPermission(user: Address, agentId: string): Promise<AgentPermission | null>;
+  getPermissionById(user: Address, permissionId: string): Promise<AgentPermission | null>;
 }

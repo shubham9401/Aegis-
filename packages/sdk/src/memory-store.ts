@@ -12,8 +12,39 @@ export class MemoryPermissionStore implements PermissionStore {
     return this.#permissions.get(this.#key(user, agentId)) ?? null;
   }
 
+  async getPermissionById(user: Address, permissionId: string): Promise<AgentPermission | null> {
+    for (const permission of this.#permissions.values()) {
+      if (
+        permission.user.toLowerCase() === user.toLowerCase() &&
+        permission.permissionId === permissionId
+      ) {
+        return permission;
+      }
+    }
+
+    return null;
+  }
+
   setPermission(permission: AgentPermission): void {
+    const duplicateId = [...this.#permissions.values()].some(
+      (existing) =>
+        existing.user.toLowerCase() === permission.user.toLowerCase() &&
+        existing.permissionId === permission.permissionId &&
+        existing.agentId !== permission.agentId,
+    );
+    if (duplicateId) throw new Error("Permission IDs must be unique per user");
+
     this.#permissions.set(this.#key(permission.user, permission.agentId), permission);
+  }
+
+  delegatePermission(parentAgentId: string, permission: AgentPermission): void {
+    const parent = this.#permissions.get(this.#key(permission.user, parentAgentId));
+    if (!parent) throw new Error("Cannot delegate from a missing parent permission");
+    if (permission.parentPermissionId !== parent.permissionId) {
+      throw new Error("Delegated permission must reference its parent permission");
+    }
+
+    this.setPermission(permission);
   }
 
   revokePermission(user: Address, agentId: string, revokedAt: number): void {

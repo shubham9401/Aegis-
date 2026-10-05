@@ -1,5 +1,6 @@
 import {
   AegisClient,
+  createDelegatedPermission,
   MemoryPermissionStore,
   type AgentPermission,
   type AgentRequest,
@@ -22,6 +23,10 @@ const permission: AgentPermission = {
   dataScopes: ["profile:dietary-preference", "profile:travel-budget"],
   actionRules: [
     {
+      action: "travel:search",
+      allowedServices: ["demo-airline"],
+    },
+    {
       action: "travel:book",
       maxAmountMinor: 50_000n,
       requireApprovalAboveMinor: 30_000n,
@@ -38,7 +43,25 @@ const privateContext: Partial<Record<DataScope, string>> = {
   "profile:passport-validity": "valid",
 };
 
+const helperPermission = createDelegatedPermission(
+  permission,
+  {
+    permissionId: "demo-permission-helper-001",
+    agentId: "erc8004:monad:flight-search-helper-001",
+    dataScopes: ["profile:dietary-preference"],
+    actionRules: [
+      {
+        action: "travel:search",
+        allowedServices: ["demo-airline"],
+      },
+    ],
+    expiresAt: now + 3_600,
+  },
+  now,
+);
+
 const store = new MemoryPermissionStore([permission]);
+store.delegatePermission(agentId, helperPermission);
 const aegis = new AegisClient({ store });
 const planner = createPlanner();
 
@@ -55,13 +78,42 @@ for (const scope of plan.requestedDataScopes) {
     requestedAt: now,
     scope,
   };
-  const decision = await aegis.check(request);
-  console.log(`Data request (${scope}):`, decision);
+  const result = await aegis.readData(request, async (approvedScope) => {
+    // Demo stand-in for a user-controlled encrypted vault/key-release adapter.
+    return privateContext[approvedScope];
+  });
+  console.log(`Data request (${scope}):`, result.decision);
 
-  if (decision.outcome === "allow") {
-    console.log(`Released context (${scope}):`, privateContext[scope]);
+  if (result.decision.outcome === "allow") {
+    console.log(`Released context (${scope}):`, result.data);
   }
 }
+
+console.log("\nDelegated helper checks:");
+const helperSearch: AgentRequest = {
+  requestId: crypto.randomUUID(),
+  kind: "action",
+  user,
+  agentId: helperPermission.agentId,
+  requestedAt: now,
+  action: "travel:search",
+  service: "demo-airline",
+};
+const helperSearchResult = await aegis.executeAction(
+  helperSearch,
+  async () => "Search action executed",
+);
+console.log("Helper search:", helperSearchResult);
+
+const helperBudgetRequest: AgentRequest = {
+  requestId: crypto.randomUUID(),
+  kind: "data",
+  user,
+  agentId: helperPermission.agentId,
+  requestedAt: now,
+  scope: "profile:travel-budget",
+};
+console.log("Helper asks for travel budget:", await aegis.check(helperBudgetRequest));
 
 const actionRequest: AgentRequest = {
   requestId: crypto.randomUUID(),
@@ -74,8 +126,19 @@ const actionRequest: AgentRequest = {
   currency: plan.proposedAction.currency,
   service: plan.proposedAction.service,
 };
-const actionDecision = await aegis.check(actionRequest);
-console.log("Booking request:", actionDecision);
+const bookingResult = await aegis.executeAction(
+  actionRequest,
+  async () => "Booking executed",
+  async () => {
+    console.log("Booking exceeds the no-prompt threshold; passkey approval is required.");
+    // No passkey adapter is wired in this CLI demo, so fail closed.
+    return false;
+  },
+);
+console.log("Booking request:", bookingResult);
+
+store.revokePermission(user, agentId, Math.floor(Date.now() / 1000));
+console.log("Helper search after parent revocation:", await aegis.check(helperSearch));
 
 function createPlanner(): TravelPlanner {
   const apiKey = process.env.KIMI_API_KEY;
