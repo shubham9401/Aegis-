@@ -19,6 +19,10 @@ function resolveDependency(name) {
   return null;
 }
 
+function readSource(file) {
+  return fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n');
+}
+
 export function compile({ quiet = false } = {}) {
   const sources = {};
   function collect(dir) {
@@ -27,7 +31,7 @@ export function compile({ quiet = false } = {}) {
       if (entry.isDirectory()) collect(absolute);
       else if (entry.name.endsWith('.sol')) {
         sources[path.relative(root, absolute).replaceAll('\\', '/')] = {
-          content: fs.readFileSync(absolute, 'utf8'),
+          content: readSource(absolute),
         };
       }
     }
@@ -46,7 +50,7 @@ export function compile({ quiet = false } = {}) {
     import: name => {
       const file = resolveDependency(name);
       return file
-        ? { contents: fs.readFileSync(file, 'utf8') }
+        ? { contents: readSource(file) }
         : { error: `Import not found: ${name}` };
     },
   }));
@@ -62,7 +66,7 @@ export function compile({ quiet = false } = {}) {
     if (!verificationSources[name]) {
       const file = resolveDependency(name);
       if (!file) throw new Error(`Compiled dependency not found: ${name}`);
-      verificationSources[name] = { content: fs.readFileSync(file, 'utf8') };
+      verificationSources[name] = { content: readSource(file) };
     }
   }
   fs.writeFileSync(path.join(root, 'artifacts', 'standard-input.json'),
