@@ -32,14 +32,18 @@ export async function POST(
   const parsed = await parseBody(request, approvalDecisionSchema);
   if (parsed instanceof Response) return parsed;
 
+  if (parsed.outcome === "approved" && parsed.signer.toLowerCase() !== existing.request.user.toLowerCase()) {
+    return apiError(403, "SIGNER_MISMATCH", "Only the permission owner may approve this request");
+  }
+
   const result =
     parsed.outcome === "approved"
       ? {
           approvalId: id,
           outcome: "approved" as const,
-          signer: parsed.signer! as Address,
-          signature: parsed.signature! as `0x${string}`,
-          nonce: parsed.nonce! as `0x${string}`,
+          signer: parsed.signer as Address,
+          signature: parsed.signature as `0x${string}`,
+          nonce: parsed.nonce as `0x${string}`,
           signedAt: parsed.signedAt ?? now,
         }
       : {

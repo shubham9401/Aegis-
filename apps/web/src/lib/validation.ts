@@ -65,19 +65,19 @@ export const createApprovalSchema = z.object({
   agentNote: z.string().max(500).optional(),
 });
 
-export const approvalDecisionSchema = z.object({
-  outcome: z.enum(["approved", "rejected"]),
-  signer: addressSchema.optional(),
-  signature: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]+$/)
-    .optional() as z.ZodType<`0x${string}` | undefined>,
-  nonce: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]+$/)
-    .optional() as z.ZodType<`0x${string}` | undefined>,
-  signedAt: z.number().int().positive().optional(),
-});
+export const approvalDecisionSchema = z.discriminatedUnion("outcome", [
+  z.object({
+    outcome: z.literal("approved"),
+    signer: addressSchema,
+    signature: z.string().regex(/^0x[a-fA-F0-9]{130}$/, "Expected a 65-byte signature"),
+    nonce: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Expected a bytes32 nonce"),
+    signedAt: z.number().int().positive().optional(),
+  }),
+  z.object({
+    outcome: z.literal("rejected"),
+    signedAt: z.number().int().positive().optional(),
+  }),
+]);
 
 // ─── Agent Plan ───
 

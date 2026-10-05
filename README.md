@@ -6,13 +6,14 @@ Aegis is a user-controlled trust and permission layer for AI agents. It lets use
 
 - `packages/sdk/` — Teammate 3's TypeScript permission-checking SDK.
 - `apps/agent-demo/` — Teammate 3's sample AI travel agent and demo flow.
+- `apps/web/` — dashboard, encrypted demo vault, permission APIs, and approval UI.
 - `contracts/` — Teammate 1's Monad permission contract and ERC-8004 integration.
 - `indexer/envio/` — Envio indexer for permission and revocation events.
 - `docs/` — architecture, team plan, and working notes.
 
 ## Build status
 
-The TypeScript workspace, permission engine, local permission adapter, and command-line travel-agent demo are working. The SDK now demonstrates narrowed agent-to-agent delegation, parent-revocation checks, permission-gated data reads, and action execution that fails closed when required approval is missing. The demo's data source is still an in-memory stand-in—not encrypted storage—and permissions are still local, not read from Monad.
+The TypeScript workspace, permission engine, local permission adapter, command-line agent demo, and web dashboard are working. The web context endpoint now uses the SDK's gated read so decryption happens only inside the allowed callback. Approval requests are checked against the current permission and are accepted only when Aegis returns `approval_required`. Permissions are still local rather than read from Monad, the vault uses a server-held demo key, and approval signatures remain a labeled mock until Mera is connected.
 
 ## Run locally
 
@@ -20,6 +21,7 @@ The TypeScript workspace, permission engine, local permission adapter, and comma
 npm install
 npm run build
 npm run demo
+npm run dev:web
 ```
 
 The demo shows the primary agent reading only granted fields, a helper agent searching under a narrower delegated permission, that helper being denied access to the travel budget, a booking held for passkey approval, and the helper being blocked after the parent permission is revoked.
@@ -32,4 +34,4 @@ The Kimi planner is a planning component only; Aegis independently checks its re
 
 ## First integration decisions
 
-Before connecting the SDK to the chain, agree on permission IDs, parent links, revocation lookup, public methods, and events with Teammate 1. Agree with Teammate 2 on how the app requests and returns passkey approval. The remaining privacy integration is a user-controlled encrypted vault/key-release adapter: the SDK gate demonstrates the required check-before-release order, but does not itself encrypt or manage keys.
+Before connecting the SDK to the chain, agree on permission IDs, parent links, revocation lookup, public methods, and events with Teammate 1. The web app now provides the integration boundary for Teammate 2, but the real Mera ceremony and server-side approval verification are still required. The current encrypted vault is intentionally labeled as a server-held-key demo; production key custody must remain user controlled.

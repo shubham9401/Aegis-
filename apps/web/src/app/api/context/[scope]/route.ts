@@ -37,16 +37,21 @@ export async function GET(
   }
   const { user, agentId } = queryResult.data;
 
-  // Run the SDK check
+  // Keep the authorization check and plaintext release behind one SDK gate.
+  // The callback is never invoked for denied requests.
   const aegis = getAegisClient();
-  const decision = await aegis.check({
-    requestId: crypto.randomUUID(),
-    kind: "data",
-    user: user as Address,
-    agentId,
-    requestedAt: Math.floor(Date.now() / 1000),
-    scope,
-  });
+  const result = await aegis.readData(
+    {
+      requestId: crypto.randomUUID(),
+      kind: "data",
+      user: user as Address,
+      agentId,
+      requestedAt: Math.floor(Date.now() / 1000),
+      scope,
+    },
+    async (approvedScope) => vaultDecrypt(user, approvedScope),
+  );
+  const { decision } = result;
 
   if (decision.outcome !== "allow") {
     logActivity({
@@ -61,8 +66,7 @@ export async function GET(
     return apiError(403, decision.reason, `Data access denied for scope "${scope}"`);
   }
 
-  // Decrypt and return the value
-  const plaintext = vaultDecrypt(user, scope);
+  const plaintext = result.data;
   if (plaintext === null) {
     return apiError(404, "DATA_NOT_FOUND", `No data stored for scope "${scope}"`);
   }

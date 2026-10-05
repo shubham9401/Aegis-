@@ -44,26 +44,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check localStorage for existing session on mount
   useEffect(() => {
-    const stored = localStorage.getItem("aegis_session");
-    if (stored) {
-      try {
-        const session = JSON.parse(stored);
-        if (session.address) {
-          setState((s) => ({ ...s, address: session.address, isConnected: true }));
+    const restore = window.setTimeout(() => {
+      const stored = localStorage.getItem("aegis_session");
+      if (stored) {
+        try {
+          const session = JSON.parse(stored);
+          if (session.address) {
+            setState((s) => ({ ...s, address: session.address, isConnected: true }));
+          }
+        } catch {
+          localStorage.removeItem("aegis_session");
         }
-      } catch {
-        localStorage.removeItem("aegis_session");
       }
-    }
+    }, 0);
+    return () => window.clearTimeout(restore);
   }, []);
-
-  // Fetch balance when connected
-  useEffect(() => {
-    if (state.isConnected && state.address) {
-      refreshBalance();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.isConnected, state.address]);
 
   const refreshBalance = useCallback(async () => {
     if (!state.address) return;
@@ -89,6 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState((s) => ({ ...s, balance: "—" }));
     }
   }, [state.address]);
+
+  // Fetch balance when connected
+  useEffect(() => {
+    if (state.isConnected && state.address) {
+      const initial = window.setTimeout(() => void refreshBalance(), 0);
+      return () => window.clearTimeout(initial);
+    }
+  }, [state.isConnected, state.address, refreshBalance]);
 
   const connect = useCallback(async () => {
     setState((s) => ({ ...s, isLoading: true, error: null }));

@@ -33,7 +33,8 @@ export default function DataVaultPage() {
 
   useEffect(() => {
     if (isConnected && address) {
-      loadVaultStatus();
+      const initial = window.setTimeout(() => void loadVaultStatus(), 0);
+      return () => window.clearTimeout(initial);
     }
   }, [isConnected, address, loadVaultStatus]);
 

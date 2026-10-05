@@ -51,10 +51,13 @@ export default function ActivityPage() {
 
   useEffect(() => {
     if (isConnected && address) {
-      loadActivity();
+      const initial = window.setTimeout(() => void loadActivity(), 0);
       // Auto-refresh every 5 seconds so events appear quickly
-      const interval = setInterval(loadActivity, 5000);
-      return () => clearInterval(interval);
+      const interval = window.setInterval(() => void loadActivity(), 5000);
+      return () => {
+        window.clearTimeout(initial);
+        window.clearInterval(interval);
+      };
     }
   }, [isConnected, address, loadActivity]);
 

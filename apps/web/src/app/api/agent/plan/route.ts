@@ -3,7 +3,7 @@
 
 import { NextRequest } from "next/server";
 import { agentPlanRequestSchema } from "@/lib/validation";
-import { apiError, parseBody } from "@/lib/utils";
+import { parseBody } from "@/lib/utils";
 import type { DataScope } from "@aegis/sdk";
 
 interface TravelPlan {

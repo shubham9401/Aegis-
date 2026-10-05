@@ -44,6 +44,7 @@ export default function PermissionsPage() {
   const [allowedServices, setAllowedServices] = useState("demo-airline");
   const [expiryHours, setExpiryHours] = useState("24");
   const [granting, setGranting] = useState(false);
+  const [now, setNow] = useState<number | null>(null);
 
   const loadPermissions = useCallback(async () => {
     if (!address) return;
@@ -61,9 +62,20 @@ export default function PermissionsPage() {
 
   useEffect(() => {
     if (isConnected && address) {
-      loadPermissions();
+      const initial = window.setTimeout(() => void loadPermissions(), 0);
+      return () => window.clearTimeout(initial);
     }
   }, [isConnected, address, loadPermissions]);
+
+  useEffect(() => {
+    const updateNow = () => setNow(Math.floor(Date.now() / 1000));
+    const initial = window.setTimeout(updateNow, 0);
+    const interval = window.setInterval(updateNow, 30_000);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const handleGrant = async () => {
     if (!address) return;
@@ -137,7 +149,7 @@ export default function PermissionsPage() {
 
   const getStatus = (p: SerializedPermission) => {
     if (p.revokedAt) return "revoked";
-    if (p.expiresAt <= Math.floor(Date.now() / 1000)) return "expired";
+    if (now !== null && p.expiresAt <= now) return "expired";
     return "active";
   };
 

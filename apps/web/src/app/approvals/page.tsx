@@ -38,6 +38,7 @@ export default function ApprovalsPage() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [selectedApproval, setSelectedApproval] = useState<StoredApproval | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [now, setNow] = useState<number | null>(null);
 
   const loadApprovals = useCallback(async () => {
     if (!address) return;
@@ -55,12 +56,25 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     if (isConnected && address) {
-      loadApprovals();
+      const initial = window.setTimeout(() => void loadApprovals(), 0);
       // Poll every 5s for new approvals
-      const interval = setInterval(loadApprovals, 5000);
-      return () => clearInterval(interval);
+      const interval = window.setInterval(() => void loadApprovals(), 5000);
+      return () => {
+        window.clearTimeout(initial);
+        window.clearInterval(interval);
+      };
     }
   }, [isConnected, address, loadApprovals]);
+
+  useEffect(() => {
+    const updateNow = () => setNow(Math.floor(Date.now() / 1000));
+    const initial = window.setTimeout(updateNow, 0);
+    const interval = window.setInterval(updateNow, 1_000);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const handleDecision = async (approvalId: string, outcome: "approved" | "rejected") => {
     if (!address) return;
@@ -91,7 +105,7 @@ export default function ApprovalsPage() {
       });
 
       if (res.ok) {
-        setMessage(outcome === "approved" ? "✅ Approved with passkey" : "✅ Request rejected");
+        setMessage(outcome === "approved" ? "✅ Approved in demo mode" : "✅ Request rejected");
         setSelectedApproval(null);
         loadApprovals();
       } else {
@@ -105,7 +119,7 @@ export default function ApprovalsPage() {
     }
   };
 
-  const isExpired = (deadline: number) => deadline <= Math.floor(Date.now() / 1000);
+  const isExpired = (deadline: number) => now !== null && deadline <= now;
 
   if (!isConnected) {
     return (
@@ -236,7 +250,7 @@ export default function ApprovalsPage() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>⚡ Action Approval</h3>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>
-              Review the details below carefully. Approve triggers a passkey signature.
+              Review the details below carefully. This build uses a clearly labeled mock signature until the Mera passkey adapter is connected.
             </p>
 
             {/* Structured fields only */}
@@ -302,7 +316,7 @@ export default function ApprovalsPage() {
                 {processing === selectedApproval.request.approvalId ? (
                   <span className="animate-pulse">Signing…</span>
                 ) : (
-                  "🔐 Approve with Passkey"
+                  "Approve (Demo)"
                 )}
               </button>
               <button

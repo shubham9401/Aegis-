@@ -2,7 +2,7 @@
 // Label: "demo vault, server-held key"
 // The data is sample data, not real personal data.
 
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import type { DataScope } from "@aegis/sdk";
 
 const ALGO = "aes-256-gcm";
