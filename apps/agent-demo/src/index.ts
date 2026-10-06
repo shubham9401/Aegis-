@@ -6,8 +6,7 @@ import {
   type AgentRequest,
   type DataScope,
 } from "@aegis/sdk";
-import { KimiTravelPlanner } from "./kimi-planner.js";
-import { LocalTravelPlanner, type TravelPlanner } from "./planner.js";
+import { createPlanner, plannerName, planWithFallback } from "./planner-factory.js";
 
 const user = "0x1111111111111111111111111111111111111111" as const;
 const agentId = "erc8004:monad:travel-agent-001";
@@ -65,7 +64,7 @@ store.delegatePermission(agentId, helperPermission);
 const aegis = new AegisClient({ store });
 const planner = createPlanner();
 
-console.log(`Planner: ${planner instanceof KimiTravelPlanner ? "Kimi" : "local demo"}`);
+console.log(`Planner: ${plannerName(planner)}`);
 const plan = await planWithFallback(planner, userRequest);
 console.log("Plan:", plan.summary);
 
@@ -126,6 +125,23 @@ const actionRequest: AgentRequest = {
   currency: plan.proposedAction.currency,
   service: plan.proposedAction.service,
 };
+
+const overBudgetRequest: AgentRequest = {
+  ...actionRequest,
+  requestId: crypto.randomUUID(),
+  amountMinor: 60_000n,
+};
+let overBudgetExecuted = false;
+const overBudgetResult = await aegis.executeAction(
+  overBudgetRequest,
+  async () => {
+    overBudgetExecuted = true;
+    return "This must never execute";
+  },
+);
+console.log("Over-budget booking ($600 against a $500 limit):", overBudgetResult);
+console.log("Over-budget action executed:", overBudgetExecuted);
+
 const bookingResult = await aegis.executeAction(
   actionRequest,
   async () => "Booking executed",
@@ -139,35 +155,3 @@ console.log("Booking request:", bookingResult);
 
 store.revokePermission(user, agentId, Math.floor(Date.now() / 1000));
 console.log("Helper search after parent revocation:", await aegis.check(helperSearch));
-
-function createPlanner(): TravelPlanner {
-  const apiKey = process.env.KIMI_API_KEY;
-  if (!apiKey) return new LocalTravelPlanner();
-
-  return new KimiTravelPlanner({
-    apiKey,
-    ...(process.env.KIMI_MODEL ? { model: process.env.KIMI_MODEL } : {}),
-  });
-}
-
-async function planWithFallback(
-  selectedPlanner: TravelPlanner,
-  request: string,
-): Promise<Awaited<ReturnType<TravelPlanner["plan"]>>> {
-  try {
-    return await selectedPlanner.plan(request);
-  } catch (error) {
-    if (!(selectedPlanner instanceof KimiTravelPlanner)) throw error;
-
-    const reason = error instanceof Error ? error.message : "unknown Kimi API error";
-    console.error("Kimi planning failed; using the local demo planner.");
-    console.error(`Kimi error: ${redactProviderIdentifiers(reason)}`);
-    return new LocalTravelPlanner().plan(request);
-  }
-}
-
-function redactProviderIdentifiers(message: string): string {
-  return message
-    .replace(/org-[a-zA-Z0-9]+/g, "org-[redacted]")
-    .replace(/<ak-[^>]+>/g, "<api-key-id-redacted>");
-}

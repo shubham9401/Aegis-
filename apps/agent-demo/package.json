@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "node --env-file-if-exists=../../.env.local --import tsx src/index.ts",
+    "dev:web": "node --env-file-if-exists=../../.env.local --import tsx src/web-demo.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

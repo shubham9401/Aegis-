@@ -28,6 +28,16 @@ npm run dev:web
 
 The demo shows the primary agent reading only granted fields, a helper agent searching under a narrower delegated permission, that helper being denied access to the travel budget, a booking held for passkey approval, and the helper being blocked after the parent permission is revoked.
 
+### Connected agent demo
+
+To prove that a separate agent application can integrate Aegis, first start the web app and use its dashboard to store the demo context and grant the travel agent a permission. Copy that permission ID into `.env.local`, along with the matching user, agent token, and values documented in `.env.example`. Then run:
+
+```bash
+npm run demo:web
+```
+
+The connected demo requests scoped context through the protected API, creates an approval request, and waits for the user to decide it in the Approvals dashboard. It executes the simulated booking only after an approved result. The current approval signature is still a clearly labeled placeholder until the Mera integration is complete.
+
 Without `KIMI_API_KEY`, the demo uses a deterministic local planner. To enable Kimi, copy `.env.example` to `.env.local`, insert a newly generated Kimi Open Platform key, and run `npm run demo`. Never commit or share the key.
 
 If Kimi is unavailable because of balance, authentication, or network problems, the demo reports the failure and continues with the labeled local planner. This fallback keeps the Aegis permission demonstration usable, but it does not qualify as a live Kimi bounty integration.
