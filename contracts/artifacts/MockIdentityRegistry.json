@@ -1,0 +1,1218 @@
+{
+  "contractName": "MockIdentityRegistry",
+  "sourceName": "contracts/test/MockIdentityRegistry.sol",
+  "compiler": "0.8.28+commit.7893614a.Emscripten.clang",
+  "evmVersion": "shanghai",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "ERC721IncorrectOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "ERC721InsufficientApproval",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "approver",
+          "type": "address"
+        }
+      ],
+      "name": "ERC721InvalidApprover",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        }
+      ],
+      "name": "ERC721InvalidOperator",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "ERC721InvalidOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        }
+      ],
+      "name": "ERC721InvalidReceiver",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        }
+      ],
+      "name": "ERC721InvalidSender",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "ERC721NonexistentToken",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "approved",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "Approval",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "approved",
+          "type": "bool"
+        }
+      ],
+      "name": "ApprovalForAll",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "Transfer",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "approve",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "balanceOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getApproved",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        }
+      ],
+      "name": "isApprovedForAll",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "name",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nextAgentId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "ownerOf",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "register",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "id",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "safeTransferFrom",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "safeTransferFrom",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "operator",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "approved",
+          "type": "bool"
+        }
+      ],
+      "name": "setApprovalForAll",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "interfaceId",
+          "type": "bytes4"
+        }
+      ],
+      "name": "supportsInterface",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "symbol",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "tokenURI",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "transferFrom",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60806040523461032557604080519081016001600160401b0381118282101761023b576040908152601582527f4d6f636b206167656e74206964656e7469746965730000000000000000000000602083015280519081016001600160401b0381118282101761023b5760405260078152661353d0d2cb525160ca1b602082015281516001600160401b03811161023b575f54600181811c9116801561031b575b602082101461021d57601f81116102b9575b50602092601f821160011461025a57928192935f9261024f575b50508160011b915f199060031b1c1916175f555b80516001600160401b03811161023b57600154600181811c91168015610231575b602082101461021d57601f81116101ba575b50602091601f821160011461015a579181925f9261014f575b50508160011b915f199060031b1c1916176001555b604051610c1d908161032a8239f35b015190505f8061012b565b601f1982169260015f52805f20915f5b8581106101a25750836001951061018a575b505050811b01600155610140565b01515f1960f88460031b161c191690555f808061017c565b9192602060018192868501518155019401920161016a565b60015f527fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6601f830160051c81019160208410610213575b601f0160051c01905b8181106102085750610112565b5f81556001016101fb565b90915081906101f2565b634e487b7160e01b5f52602260045260245ffd5b90607f1690610100565b634e487b7160e01b5f52604160045260245ffd5b015190505f806100cb565b601f198216935f8052805f20915f5b8681106102a15750836001959610610289575b505050811b015f556100df565b01515f1960f88460031b161c191690555f808061027c565b91926020600181928685015181550194019201610269565b5f80527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563601f830160051c81019160208410610311575b601f0160051c01905b81811061030657506100b1565b5f81556001016102f9565b90915081906102f0565b90607f169061009f565b5f80fdfe6080806040526004361015610012575f80fd5b5f905f3560e01c90816301ffc9a7146107845750806306fdde03146106cc578063081812fc14610690578063095ea7b3146105a65780631aa3a0081461048557806323b872dd1461046e57806330efc4981461045157806342842e0e146104285780636352211e146103f857806370a08231146103a757806395d89b411461029f578063a22cb46514610204578063b88d4fde1461017a578063c87b56dd1461011d5763e985e9c5146100c3575f80fd5b3461011a57604036600319011261011a5760406100de61082e565b916100e7610844565b9260018060a01b031681526005602052209060018060a01b03165f52602052602060ff60405f2054166040519015158152f35b80fd5b3461017657602036600319011261017657610139600435610bb3565b505f604051610149602082610894565b5261017260405161015b602082610894565b5f81526040519182916020835260208301906107ef565b0390f35b5f80fd5b346101765760803660031901126101765761019361082e565b61019b610844565b6064359167ffffffffffffffff83116101765736602384011215610176578260040135916101c8836108ca565b926101d66040519485610894565b8084523660248287010111610176576020815f9260246102029801838801378501015260443591610a73565b005b346101765760403660031901126101765761021d61082e565b60243590811515809203610176576001600160a01b031690811561028c57335f52600560205260405f20825f5260205260405f2060ff1981541660ff83161790556040519081527f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c3160203392a3005b50630b61174360e31b5f5260045260245ffd5b34610176575f366003190112610176576040515f6001548060011c9060018116801561039d575b602083108114610389578285529081156103655750600114610307575b610172836102f381850382610894565b6040519182916020835260208301906107ef565b91905060015f527fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6915f905b80821061034b575090915081016020016102f36102e3565b919260018160209254838588010152019101909291610333565b60ff191660208086019190915291151560051b840190910191506102f390506102e3565b634e487b7160e01b5f52602260045260245ffd5b91607f16916102c6565b34610176576020366003190112610176576001600160a01b036103c861082e565b1680156103e5575f526003602052602060405f2054604051908152f35b6322718ad960e21b5f525f60045260245ffd5b34610176576020366003190112610176576020610416600435610bb3565b6040516001600160a01b039091168152f35b34610176576102026104393661085a565b9060405192610449602085610894565b5f8452610a73565b34610176575f366003190112610176576020600654604051908152f35b346101765761020261047f3661085a565b916108e6565b34610176575f366003190112610176576006545f1981146105925760018101600655331561057f575f818152600260205260409020546001600160a01b0316801515908161054c575b335f818152600360209081526040808320805460010190558683526002909152812080546001600160a01b0319168317905584919083907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9080a45061053957602090604051908152f35b6339e3563760e11b5f525f60045260245ffd5b5f83815260046020526040902080546001600160a01b0319169055805f52600360205260405f205f1981540190556104ce565b633250574960e11b5f525f60045260245ffd5b634e487b7160e01b5f52601160045260245ffd5b34610176576040366003190112610176576105bf61082e565b6024356105cb81610bb3565b3315158061067d575b80610650575b61063d5781906001600160a01b0384811691167f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b9255f80a45f90815260046020526040902080546001600160a01b0319166001600160a01b03909216919091179055005b63a9fbf51f60e01b5f523360045260245ffd5b506001600160a01b0381165f90815260056020908152604080832033845290915290205460ff16156105da565b506001600160a01b0381163314156105d4565b34610176576020366003190112610176576004356106ad81610bb3565b505f526004602052602060018060a01b0360405f205416604051908152f35b34610176575f366003190112610176576040515f5f548060011c9060018116801561077a575b60208310811461038957828552908115610365575060011461071e57610172836102f381850382610894565b5f8080527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563939250905b808210610760575090915081016020016102f36102e3565b919260018160209254838588010152019101909291610748565b91607f16916106f2565b34610176576020366003190112610176576004359063ffffffff60e01b8216809203610176576020916380ac58cd60e01b81149081156107de575b81156107cd575b5015158152f35b6301ffc9a760e01b149050836107c6565b635b5e139f60e01b811491506107bf565b91908251928382525f5b848110610819575050825f602080949584010152601f8019910116010190565b806020809284010151828286010152016107f9565b600435906001600160a01b038216820361017657565b602435906001600160a01b038216820361017657565b6060906003190112610176576004356001600160a01b038116810361017657906024356001600160a01b0381168103610176579060443590565b90601f8019910116810190811067ffffffffffffffff8211176108b657604052565b634e487b7160e01b5f52604160045260245ffd5b67ffffffffffffffff81116108b657601f01601f191660200190565b6001600160a01b039091169190821561057f575f828152600260205260409020546001600160a01b0316928290331515806109de575b50846109ab575b805f52600360205260405f2060018154019055815f52600260205260405f20816bffffffffffffffffffffffff60a01b825416179055847fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef5f80a46001600160a01b031680830361099357505050565b6364283d7b60e01b5f5260045260245260445260645ffd5b5f82815260046020526040902080546001600160a01b0319169055845f52600360205260405f205f198154019055610923565b90915080610a22575b156109f45782905f61091c565b8284610a0c57637e27328960e01b5f5260045260245ffd5b63177e802f60e01b5f523360045260245260445ffd5b503384148015610a51575b806109e757505f838152600460205260409020546001600160a01b031633146109e7565b505f84815260056020908152604080832033845290915290205460ff16610a2d565b9291610a808183866108e6565b813b610a8d575b50505050565b604051630a85bd0160e11b81523360048201526001600160a01b0394851660248201526044810191909152608060648201529216919060209082908190610ad89060848301906107ef565b03815f865af15f9181610b6e575b50610b3b57503d15610b34573d610afc816108ca565b90610b0a6040519283610894565b81523d5f602083013e5b80519081610b2f5782633250574960e11b5f5260045260245ffd5b602001fd5b6060610b14565b6001600160e01b03191663757a42ff60e11b01610b5c57505f808080610a87565b633250574960e11b5f5260045260245ffd5b9091506020813d602011610bab575b81610b8a60209383610894565b8101031261017657516001600160e01b03198116810361017657905f610ae6565b3d9150610b7d565b5f818152600260205260409020546001600160a01b0316908115610bd5575090565b637e27328960e01b5f5260045260245ffdfea2646970667358221220ba4fe66d229fee4332fa1b2ff9d6ff50e7410711f3f90f0d6fda714ab144e34a64736f6c634300081c0033",
+  "deployedBytecode": "0x6080806040526004361015610012575f80fd5b5f905f3560e01c90816301ffc9a7146107845750806306fdde03146106cc578063081812fc14610690578063095ea7b3146105a65780631aa3a0081461048557806323b872dd1461046e57806330efc4981461045157806342842e0e146104285780636352211e146103f857806370a08231146103a757806395d89b411461029f578063a22cb46514610204578063b88d4fde1461017a578063c87b56dd1461011d5763e985e9c5146100c3575f80fd5b3461011a57604036600319011261011a5760406100de61082e565b916100e7610844565b9260018060a01b031681526005602052209060018060a01b03165f52602052602060ff60405f2054166040519015158152f35b80fd5b3461017657602036600319011261017657610139600435610bb3565b505f604051610149602082610894565b5261017260405161015b602082610894565b5f81526040519182916020835260208301906107ef565b0390f35b5f80fd5b346101765760803660031901126101765761019361082e565b61019b610844565b6064359167ffffffffffffffff83116101765736602384011215610176578260040135916101c8836108ca565b926101d66040519485610894565b8084523660248287010111610176576020815f9260246102029801838801378501015260443591610a73565b005b346101765760403660031901126101765761021d61082e565b60243590811515809203610176576001600160a01b031690811561028c57335f52600560205260405f20825f5260205260405f2060ff1981541660ff83161790556040519081527f17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c3160203392a3005b50630b61174360e31b5f5260045260245ffd5b34610176575f366003190112610176576040515f6001548060011c9060018116801561039d575b602083108114610389578285529081156103655750600114610307575b610172836102f381850382610894565b6040519182916020835260208301906107ef565b91905060015f527fb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6915f905b80821061034b575090915081016020016102f36102e3565b919260018160209254838588010152019101909291610333565b60ff191660208086019190915291151560051b840190910191506102f390506102e3565b634e487b7160e01b5f52602260045260245ffd5b91607f16916102c6565b34610176576020366003190112610176576001600160a01b036103c861082e565b1680156103e5575f526003602052602060405f2054604051908152f35b6322718ad960e21b5f525f60045260245ffd5b34610176576020366003190112610176576020610416600435610bb3565b6040516001600160a01b039091168152f35b34610176576102026104393661085a565b9060405192610449602085610894565b5f8452610a73565b34610176575f366003190112610176576020600654604051908152f35b346101765761020261047f3661085a565b916108e6565b34610176575f366003190112610176576006545f1981146105925760018101600655331561057f575f818152600260205260409020546001600160a01b0316801515908161054c575b335f818152600360209081526040808320805460010190558683526002909152812080546001600160a01b0319168317905584919083907fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef9080a45061053957602090604051908152f35b6339e3563760e11b5f525f60045260245ffd5b5f83815260046020526040902080546001600160a01b0319169055805f52600360205260405f205f1981540190556104ce565b633250574960e11b5f525f60045260245ffd5b634e487b7160e01b5f52601160045260245ffd5b34610176576040366003190112610176576105bf61082e565b6024356105cb81610bb3565b3315158061067d575b80610650575b61063d5781906001600160a01b0384811691167f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b9255f80a45f90815260046020526040902080546001600160a01b0319166001600160a01b03909216919091179055005b63a9fbf51f60e01b5f523360045260245ffd5b506001600160a01b0381165f90815260056020908152604080832033845290915290205460ff16156105da565b506001600160a01b0381163314156105d4565b34610176576020366003190112610176576004356106ad81610bb3565b505f526004602052602060018060a01b0360405f205416604051908152f35b34610176575f366003190112610176576040515f5f548060011c9060018116801561077a575b60208310811461038957828552908115610365575060011461071e57610172836102f381850382610894565b5f8080527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563939250905b808210610760575090915081016020016102f36102e3565b919260018160209254838588010152019101909291610748565b91607f16916106f2565b34610176576020366003190112610176576004359063ffffffff60e01b8216809203610176576020916380ac58cd60e01b81149081156107de575b81156107cd575b5015158152f35b6301ffc9a760e01b149050836107c6565b635b5e139f60e01b811491506107bf565b91908251928382525f5b848110610819575050825f602080949584010152601f8019910116010190565b806020809284010151828286010152016107f9565b600435906001600160a01b038216820361017657565b602435906001600160a01b038216820361017657565b6060906003190112610176576004356001600160a01b038116810361017657906024356001600160a01b0381168103610176579060443590565b90601f8019910116810190811067ffffffffffffffff8211176108b657604052565b634e487b7160e01b5f52604160045260245ffd5b67ffffffffffffffff81116108b657601f01601f191660200190565b6001600160a01b039091169190821561057f575f828152600260205260409020546001600160a01b0316928290331515806109de575b50846109ab575b805f52600360205260405f2060018154019055815f52600260205260405f20816bffffffffffffffffffffffff60a01b825416179055847fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef5f80a46001600160a01b031680830361099357505050565b6364283d7b60e01b5f5260045260245260445260645ffd5b5f82815260046020526040902080546001600160a01b0319169055845f52600360205260405f205f198154019055610923565b90915080610a22575b156109f45782905f61091c565b8284610a0c57637e27328960e01b5f5260045260245ffd5b63177e802f60e01b5f523360045260245260445ffd5b503384148015610a51575b806109e757505f838152600460205260409020546001600160a01b031633146109e7565b505f84815260056020908152604080832033845290915290205460ff16610a2d565b9291610a808183866108e6565b813b610a8d575b50505050565b604051630a85bd0160e11b81523360048201526001600160a01b0394851660248201526044810191909152608060648201529216919060209082908190610ad89060848301906107ef565b03815f865af15f9181610b6e575b50610b3b57503d15610b34573d610afc816108ca565b90610b0a6040519283610894565b81523d5f602083013e5b80519081610b2f5782633250574960e11b5f5260045260245ffd5b602001fd5b6060610b14565b6001600160e01b03191663757a42ff60e11b01610b5c57505f808080610a87565b633250574960e11b5f5260045260245ffd5b9091506020813d602011610bab575b81610b8a60209383610894565b8101031261017657516001600160e01b03198116810361017657905f610ae6565b3d9150610b7d565b5f818152600260205260409020546001600160a01b0316908115610bd5575090565b637e27328960e01b5f5260045260245ffdfea2646970667358221220ba4fe66d229fee4332fa1b2ff9d6ff50e7410711f3f90f0d6fda714ab144e34a64736f6c634300081c0033",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.28+commit.7893614a"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            }
+          ],
+          "name": "ERC721IncorrectOwner",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "ERC721InsufficientApproval",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "approver",
+              "type": "address"
+            }
+          ],
+          "name": "ERC721InvalidApprover",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            }
+          ],
+          "name": "ERC721InvalidOperator",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            }
+          ],
+          "name": "ERC721InvalidOwner",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "receiver",
+              "type": "address"
+            }
+          ],
+          "name": "ERC721InvalidReceiver",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "sender",
+              "type": "address"
+            }
+          ],
+          "name": "ERC721InvalidSender",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "ERC721NonexistentToken",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "approved",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "Approval",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            }
+          ],
+          "name": "ApprovalForAll",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "Transfer",
+          "type": "event"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "approve",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            }
+          ],
+          "name": "balanceOf",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "getApproved",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            }
+          ],
+          "name": "isApprovedForAll",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "name",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "nextAgentId",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "ownerOf",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "register",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "safeTransferFrom",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "name": "safeTransferFrom",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            }
+          ],
+          "name": "setApprovalForAll",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes4",
+              "name": "interfaceId",
+              "type": "bytes4"
+            }
+          ],
+          "name": "supportsInterface",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "symbol",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "tokenURI",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "from",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            }
+          ],
+          "name": "transferFrom",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ],
+      "devdoc": {
+        "errors": {
+          "ERC721IncorrectOwner(address,uint256,address)": [
+            {
+              "details": "Indicates an error related to the ownership over a particular token. Used in transfers.",
+              "params": {
+                "owner": "Address of the current owner of a token.",
+                "sender": "Address whose tokens are being transferred.",
+                "tokenId": "Identifier number of a token."
+              }
+            }
+          ],
+          "ERC721InsufficientApproval(address,uint256)": [
+            {
+              "details": "Indicates a failure with the `operator`’s approval. Used in transfers.",
+              "params": {
+                "operator": "Address that may be allowed to operate on tokens without being their owner.",
+                "tokenId": "Identifier number of a token."
+              }
+            }
+          ],
+          "ERC721InvalidApprover(address)": [
+            {
+              "details": "Indicates a failure with the `approver` of a token to be approved. Used in approvals.",
+              "params": {
+                "approver": "Address initiating an approval operation."
+              }
+            }
+          ],
+          "ERC721InvalidOperator(address)": [
+            {
+              "details": "Indicates a failure with the `operator` to be approved. Used in approvals.",
+              "params": {
+                "operator": "Address that may be allowed to operate on tokens without being their owner."
+              }
+            }
+          ],
+          "ERC721InvalidOwner(address)": [
+            {
+              "details": "Indicates that an address can't be an owner. For example, `address(0)` is a forbidden owner in ERC-20. Used in balance queries.",
+              "params": {
+                "owner": "Address of the current owner of a token."
+              }
+            }
+          ],
+          "ERC721InvalidReceiver(address)": [
+            {
+              "details": "Indicates a failure with the token `receiver`. Used in transfers.",
+              "params": {
+                "receiver": "Address to which tokens are being transferred."
+              }
+            }
+          ],
+          "ERC721InvalidSender(address)": [
+            {
+              "details": "Indicates a failure with the token `sender`. Used in transfers.",
+              "params": {
+                "sender": "Address whose tokens are being transferred."
+              }
+            }
+          ],
+          "ERC721NonexistentToken(uint256)": [
+            {
+              "details": "Indicates a `tokenId` whose `owner` is the zero address.",
+              "params": {
+                "tokenId": "Identifier number of a token."
+              }
+            }
+          ]
+        },
+        "events": {
+          "Approval(address,address,uint256)": {
+            "details": "Emitted when `owner` enables `approved` to manage the `tokenId` token."
+          },
+          "ApprovalForAll(address,address,bool)": {
+            "details": "Emitted when `owner` enables or disables (`approved`) `operator` to manage all of its assets."
+          },
+          "Transfer(address,address,uint256)": {
+            "details": "Emitted when `tokenId` token is transferred from `from` to `to`."
+          }
+        },
+        "kind": "dev",
+        "methods": {
+          "approve(address,uint256)": {
+            "details": "Gives permission to `to` to transfer `tokenId` token to another account. The approval is cleared when the token is transferred. Only a single account can be approved at a time, so approving the zero address clears previous approvals. Requirements: - The caller must own the token or be an approved operator. - `tokenId` must exist. Emits an {Approval} event."
+          },
+          "balanceOf(address)": {
+            "details": "Returns the number of tokens in ``owner``'s account."
+          },
+          "getApproved(uint256)": {
+            "details": "Returns the account approved for `tokenId` token. Requirements: - `tokenId` must exist."
+          },
+          "isApprovedForAll(address,address)": {
+            "details": "Returns if the `operator` is allowed to manage all of the assets of `owner`. See {setApprovalForAll}"
+          },
+          "name()": {
+            "details": "Returns the token collection name."
+          },
+          "ownerOf(uint256)": {
+            "details": "Returns the owner of the `tokenId` token. Requirements: - `tokenId` must exist."
+          },
+          "safeTransferFrom(address,address,uint256)": {
+            "details": "Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients are aware of the ERC-721 protocol to prevent tokens from being forever locked. Requirements: - `from` cannot be the zero address. - `to` cannot be the zero address. - `tokenId` token must exist and be owned by `from`. - If the caller is not `from`, it must have been allowed to move this token by either {approve} or   {setApprovalForAll}. - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon   a safe transfer. Emits a {Transfer} event."
+          },
+          "safeTransferFrom(address,address,uint256,bytes)": {
+            "details": "Safely transfers `tokenId` token from `from` to `to`. Requirements: - `from` cannot be the zero address. - `to` cannot be the zero address. - `tokenId` token must exist and be owned by `from`. - If the caller is not `from`, it must be approved to move this token by either {approve} or {setApprovalForAll}. - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon   a safe transfer. Emits a {Transfer} event."
+          },
+          "setApprovalForAll(address,bool)": {
+            "details": "Approve or remove `operator` as an operator for the caller. Operators can call {transferFrom} or {safeTransferFrom} for any token owned by the caller. Requirements: - The `operator` cannot be the address zero. Emits an {ApprovalForAll} event."
+          },
+          "supportsInterface(bytes4)": {
+            "details": "Returns true if this contract implements the interface defined by `interfaceId`. See the corresponding https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[ERC section] to learn more about how these ids are created. This function call must use less than 30 000 gas."
+          },
+          "symbol()": {
+            "details": "Returns the token collection symbol."
+          },
+          "tokenURI(uint256)": {
+            "details": "Returns the Uniform Resource Identifier (URI) for `tokenId` token."
+          },
+          "transferFrom(address,address,uint256)": {
+            "details": "Transfers `tokenId` token from `from` to `to`. WARNING: Note that the caller is responsible to confirm that the recipient is capable of receiving ERC-721 or else they may be permanently lost. Usage of {safeTransferFrom} prevents loss, though the caller must understand this adds an external call which potentially creates a reentrancy vulnerability. Requirements: - `from` cannot be the zero address. - `to` cannot be the zero address. - `tokenId` token must be owned by `from`. - If the caller is not `from`, it must be approved to move this token by either {approve} or {setApprovalForAll}. Emits a {Transfer} event."
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "notice": "Local tests only; NOT a full ERC-8004 registry or a testnet fallback.",
+        "version": 1
+      }
+    },
+    "settings": {
+      "compilationTarget": {
+        "contracts/test/MockIdentityRegistry.sol": "MockIdentityRegistry"
+      },
+      "evmVersion": "shanghai",
+      "libraries": {},
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "@openzeppelin/contracts/interfaces/draft-IERC6093.sol": {
+        "keccak256": "0x19fdfb0f3b89a230e7dbd1cf416f1a6b531a3ee5db4da483f946320fc74afc0e",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://3490d794728f5bfecb46820431adaff71ba374141545ec20b650bb60353fac23",
+          "dweb:/ipfs/QmPsfxjVpMcZbpE7BH93DzTpEaktESigEw4SmDzkXuJ4WR"
+        ]
+      },
+      "@openzeppelin/contracts/token/ERC721/ERC721.sol": {
+        "keccak256": "0x6ead281d4569c26b3dee7313aefff24add906f3600b57d8aef1255a17d6b34e5",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://aec0f9c9f14f829353663e1946bf0ea00a1771ff6ddb4f7cbe14893397b4b55c",
+          "dweb:/ipfs/QmVMR3SdijdM2BpL9Yp3u7Riaxqgs1FnZ1Rfg2CMjKGtVS"
+        ]
+      },
+      "@openzeppelin/contracts/token/ERC721/IERC721.sol": {
+        "keccak256": "0xf78f05f3b8c9f75570e85300d7b4600d7f6f6a198449273f31d44c1641adb46f",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://e28b872613b45e0e801d4995aa4380be2531147bfe2d85c1d6275f1de514fba3",
+          "dweb:/ipfs/QmeeFcfShHYaS3BdgVj78nxR28ZaVUwbvr66ud8bT6kzw9"
+        ]
+      },
+      "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol": {
+        "keccak256": "0x88cd5e3bee2e8c36b8d9058fbcaa81ad5704281b25634122234b55ea853d8055",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://8dc7e7ab5b8ea36c15027ab04221b05d1c970f47a53e9fd47ead8ca665d49c7e",
+          "dweb:/ipfs/Qmeeph7fsDyfRr8vb2L8KcDEmKPb224TAayMvgqgGAnqpL"
+        ]
+      },
+      "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol": {
+        "keccak256": "0xf46268c37522320bb2119a5a394bc5c739a95c0c574c8d08e8c643f4d06e5c76",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://517e4b295f35b9947c72ad7379a6089439ece7bb6f4a2ea0a159da13046c039e",
+          "dweb:/ipfs/QmZXzkSfLUbvujig3zVbpDHykpHhqLpvQtdiN3B5j4TA3u"
+        ]
+      },
+      "@openzeppelin/contracts/token/ERC721/utils/ERC721Utils.sol": {
+        "keccak256": "0xc2dfdc8fbc8fdb142575c90568e237b809a1feaccff23e32d00131887a08dc36",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://dbc1d283ee77da43d61661b5ba1adeb427d6a6224335494a9a857dce41d9f1d6",
+          "dweb:/ipfs/QmTnA35z7XzkxFSRUqB6CGVH1nhmvajwnDNfA5PiKmYuCi"
+        ]
+      },
+      "@openzeppelin/contracts/utils/Context.sol": {
+        "keccak256": "0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12",
+          "dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF"
+        ]
+      },
+      "@openzeppelin/contracts/utils/Panic.sol": {
+        "keccak256": "0xf7fe324703a64fc51702311dc51562d5cb1497734f074e4f483bfb6717572d7a",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://c6a5ff4f9fd8649b7ee20800b7fa387d3465bd77cf20c2d1068cd5c98e1ed57a",
+          "dweb:/ipfs/QmVSaVJf9FXFhdYEYeCEfjMVHrxDh5qL4CGkxdMWpQCrqG"
+        ]
+      },
+      "@openzeppelin/contracts/utils/Strings.sol": {
+        "keccak256": "0xad148d59f05165f9217d0a9e1ac8f772abb02ea6aaad8a756315c532bf79f9f4",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://15e3599867c2182f5831e9268b274b2ef2047825837df6b4d81c9e89254b093e",
+          "dweb:/ipfs/QmZbL7XAYr5RmaNaooPgZRmcDXaudfsYQfYD9y5iAECvpS"
+        ]
+      },
+      "@openzeppelin/contracts/utils/introspection/ERC165.sol": {
+        "keccak256": "0x2d9dc2fe26180f74c11c13663647d38e259e45f95eb88f57b61d2160b0109d3e",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://81233d1f98060113d9922180bb0f14f8335856fe9f339134b09335e9f678c377",
+          "dweb:/ipfs/QmWh6R35SarhAn4z2wH8SU456jJSYL2FgucfTFgbHJJN4E"
+        ]
+      },
+      "@openzeppelin/contracts/utils/introspection/IERC165.sol": {
+        "keccak256": "0x8891738ffe910f0cf2da09566928589bf5d63f4524dd734fd9cedbac3274dd5c",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://971f954442df5c2ef5b5ebf1eb245d7105d9fbacc7386ee5c796df1d45b21617",
+          "dweb:/ipfs/QmadRjHbkicwqwwh61raUEapaVEtaLMcYbQZWs9gUkgj3u"
+        ]
+      },
+      "@openzeppelin/contracts/utils/math/Math.sol": {
+        "keccak256": "0x1225214420c83ebcca88f2ae2b50f053aaa7df7bd684c3e878d334627f2edfc6",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://6c5fab4970634f9ab9a620983dc1c8a30153981a0b1a521666e269d0a11399d3",
+          "dweb:/ipfs/QmVRnBC575MESGkEHndjujtR7qub2FzU9RWy9eKLp4hPZB"
+        ]
+      },
+      "@openzeppelin/contracts/utils/math/SafeCast.sol": {
+        "keccak256": "0x195533c86d0ef72bcc06456a4f66a9b941f38eb403739b00f21fd7c1abd1ae54",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://b1d578337048cad08c1c03041cca5978eff5428aa130c781b271ad9e5566e1f8",
+          "dweb:/ipfs/QmPFKL2r9CBsMwmUqqdcFPfHZB2qcs9g1HDrPxzWSxomvy"
+        ]
+      },
+      "@openzeppelin/contracts/utils/math/SignedMath.sol": {
+        "keccak256": "0xb1970fac7b64e6c09611e6691791e848d5e3fe410fa5899e7df2e0afd77a99e3",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://db5fbb3dddd8b7047465b62575d96231ba8a2774d37fb4737fbf23340fabbb03",
+          "dweb:/ipfs/QmVUSvooZKEdEdap619tcJjTLcAuH6QBdZqAzWwnAXZAWJ"
+        ]
+      },
+      "contracts/test/MockIdentityRegistry.sol": {
+        "keccak256": "0x1e307b6c239cb1e5b694116988b1d9a7d4df1c427e08198f4f092a06882bf3ff",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://0692a54d756f10edd0414c8c5c6e498f731b2b8077bbd801834b4dfb4b3d1436",
+          "dweb:/ipfs/Qmcd7Xasv65N4wEBHtcy3B5ZaUZab2yzvtZq3GtWBF7dB9"
+        ]
+      }
+    },
+    "version": 1
+  }
+}

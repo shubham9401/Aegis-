@@ -5,15 +5,17 @@
   "description": "A user-controlled trust and permission layer for AI agents on Monad.",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "contracts"
   ],
   "scripts": {
-    "build": "npm run build --workspace @aegis/sdk && npm run build --workspace @aegis/agent-demo && npm run build --workspace @aegis/web",
+    "build": "npm run compile --workspace @aegis/contracts && npm run build --workspace @aegis/sdk && npm run build --workspace @aegis/agent-demo && npm run build --workspace @aegis/web",
     "dev:web": "npm run build --workspace @aegis/sdk && npm run dev --workspace @aegis/web",
     "demo": "npm run dev --workspace @aegis/agent-demo",
     "demo:web": "npm run build --workspace @aegis/sdk && npm run dev:web --workspace @aegis/agent-demo",
+    "demo:contracts": "npm run demo --workspace @aegis/contracts",
     "typecheck": "npm run build --workspace @aegis/sdk && npm run typecheck --workspaces --if-present",
-    "test": "npm run build --workspace @aegis/sdk && npm run build --workspace @aegis/agent-demo && node --test packages/sdk/test/*.test.mjs"
+    "test": "npm run test --workspace @aegis/contracts && npm run build --workspace @aegis/sdk && npm run build --workspace @aegis/agent-demo && node --test packages/sdk/test/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
