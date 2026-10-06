@@ -13,7 +13,7 @@ Aegis is a user-controlled trust and permission layer for AI agents. It lets use
 
 ## Build status
 
-The TypeScript workspace, permission engine, local permission adapter, command-line agent demo, web dashboard, and Solidity contract package are working locally. The contract provides on-chain grants, bounded delegation, revocation, ERC-8004 ownership checks, token limits, and exact one-use payment approvals. The web context endpoint uses the SDK's gated read so decryption happens only inside the allowed callback. The app and SDK still use their local permission adapter rather than the deployed contract, the vault uses a server-held demo key, and approval signatures remain a labeled mock until Mera is connected. The contract has not yet been deployed to Monad testnet.
+The TypeScript workspace, permission engine, local permission adapter, command-line agent demo, web dashboard, and Solidity contract package are working locally. Aegis is deployed to Monad testnet at `0x37Ba78B771FC28Dc03387c8777997F751120664D`, with demo token `aUSD-TEST` at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. The web context endpoint uses the SDK's gated read so decryption happens only inside the allowed callback. The app and SDK still need to replace their local permission adapter with the deployed contract; the vault uses a server-held demo key, and approval signatures remain a labeled mock until Mera is connected.
 
 ## Run locally
 

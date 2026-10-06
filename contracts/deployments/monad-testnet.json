@@ -1,0 +1,17 @@
+{
+  "chainId": 10143,
+  "network": "monad-testnet",
+  "deployer": "0x792e485C5A756Dc2e22AF9Cda70c10fC3754b8b6",
+  "identityRegistryAddress": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "status": "deployed",
+  "updatedAt": "2026-10-06T20:08:29.711Z",
+  "tokenTransactionHash": "0x7c0caea655471bf125d236444fd781d6c8c35ef3082fa6857aeba185143522f9",
+  "paymentTokenAddress": "0xdDa9B63b3e2996A62933cea050A46ACb08E987db",
+  "paymentTokenIsDemo": true,
+  "paymentTokenDecimals": 6,
+  "paymentTokenSymbol": "aUSD-TEST",
+  "aegisTransactionHash": "0x7406590c984b3711380e1f5a378ec05b7e16b296b66878468ddef991247e13fb",
+  "aegisAddress": "0x37Ba78B771FC28Dc03387c8777997F751120664D",
+  "abiPath": "artifacts/AegisPermissions.abi.json",
+  "compiler": "0.8.28+commit.7893614a.Emscripten.clang"
+}
