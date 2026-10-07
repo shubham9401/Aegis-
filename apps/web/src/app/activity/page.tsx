@@ -33,23 +33,27 @@ const typeConfig: Record<string, { icon: IconName; label: string; css: string }>
 };
 
 export default function ActivityPage() {
-  const { isConnected, address } = useAuth();
+  const { isConnected, address, authenticatedFetch } = useAuth();
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadActivity = useCallback(async () => {
     if (!address) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/activity?user=${address}`);
+      const res = await authenticatedFetch(`/api/activity?user=${address}`);
       const data = await res.json();
-      setActivity(data.activity ?? []);
-    } catch {
-      // ignore
+      if (!res.ok) throw new Error(`${data.error ?? "Unable to load activity"}${data.detail ? `: ${data.detail}` : ""}`);
+      if (!Array.isArray(data.activity)) throw new Error("Invalid activity response");
+      setActivity(data.activity);
+      setError(null);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to load activity");
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, authenticatedFetch]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -77,9 +81,10 @@ export default function ActivityPage() {
     <div className="page-container">
       <h1 className="page-title">Activity</h1>
       <p className="page-subtitle">
-        Full audit trail — permissions created, data released, denials, and revocations. Newest first.
+        Recorded permission changes and app decisions, newest first. This feed covers requests made through Aegis.
       </p>
 
+      {error ? <div role="alert" className="alert-error">{error}</div> : null}
       <div className="glass-card" style={{ overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid var(--border-color)" }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}>
@@ -88,6 +93,7 @@ export default function ActivityPage() {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Auto-refreshing</span>
             <button
+              aria-label="Refresh activity"
               className="btn btn-ghost"
               style={{ padding: "4px 10px", fontSize: 12 }}
               onClick={loadActivity}
@@ -141,7 +147,7 @@ export default function ActivityPage() {
                           {entry.permissionId}
                         </span>
                       )}
-                      {entry.reason && entry.reason !== "REQUEST_ALLOWED" && (
+                      {entry.reason && (
                         <span
                           style={{
                             fontSize: 11,
@@ -151,7 +157,7 @@ export default function ActivityPage() {
                             color: "#f87171",
                           }}
                         >
-                          {reasonMessage(entry.reason)}
+                          {entry.reason}: {reasonMessage(entry.reason)}
                         </span>
                       )}
                     </div>

@@ -6,17 +6,23 @@ import { logActivity } from "@/lib/activity-log";
 import { approvalDecisionSchema } from "@/lib/validation";
 import { apiError, parseBody } from "@/lib/utils";
 import type { Address } from "@aegis/sdk";
+import { requireUser } from "@/lib/server-auth";
+import { getAegisClient } from "@/lib/aegis";
+import { verifyApprovalSignature } from "@/lib/approval-store";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  try {
   const { id } = await params;
 
   const existing = getApproval(id);
   if (!existing) {
     return apiError(404, "NOT_FOUND", "Approval not found");
   }
+  const authorization = await requireUser(request, existing.request.user);
+  if (authorization instanceof Response) return authorization;
 
   // Check if expired
   const now = Math.floor(Date.now() / 1000);
@@ -36,6 +42,18 @@ export async function POST(
     return apiError(403, "SIGNER_MISMATCH", "Only the permission owner may approve this request");
   }
 
+  if (parsed.outcome === "approved") {
+    const action = existing.request;
+    const decision = await getAegisClient().check({
+      ...action, kind: "action", requestedAt: now, amountMinor: BigInt(action.amountMinor),
+    });
+    if (decision.outcome === "deny") return apiError(403, decision.reason, "Permission no longer allows this action");
+    if (decision.permissionId !== action.permissionId) return apiError(409, "PERMISSION_MISMATCH", "Permission changed since this request");
+    if (!(await verifyApprovalSignature(action, parsed.signature as `0x${string}`, parsed.nonce as `0x${string}`))) {
+      return apiError(403, "INVALID_SIGNATURE", "Signature does not match the owner and structured action");
+    }
+  }
+
   const result =
     parsed.outcome === "approved"
       ? {
@@ -44,12 +62,12 @@ export async function POST(
           signer: parsed.signer as Address,
           signature: parsed.signature as `0x${string}`,
           nonce: parsed.nonce as `0x${string}`,
-          signedAt: parsed.signedAt ?? now,
+          signedAt: now,
         }
       : {
           approvalId: id,
           outcome: "rejected" as const,
-          signedAt: parsed.signedAt ?? now,
+          signedAt: now,
         };
 
   const updated = decideApproval(id, result);
@@ -67,5 +85,6 @@ export async function POST(
     amountMinor: existing.request.amountMinor,
   });
 
-  return Response.json(updated);
+  return Response.json(updated, { headers: { "Cache-Control": "no-store" } });
+  } catch { return apiError(503, "PERMISSION_STATE_UNAVAILABLE", "Permission state is unavailable"); }
 }

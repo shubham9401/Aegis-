@@ -2,6 +2,7 @@
 // Tracks permissions created, used, revoked, and denied requests
 
 import type { Address, DecisionReason } from "@aegis/sdk";
+import { readLocalStore, writeLocalStore } from "./local-store";
 
 export type ActivityType =
   | "permission_created"
@@ -28,17 +29,8 @@ export interface ActivityEntry {
   amountMinor?: string;
 }
 
-// ─── globalThis singleton ───
-
-const globalLog = globalThis as unknown as {
-  __aegis_activity?: ActivityEntry[];
-};
-
 function getLog(): ActivityEntry[] {
-  if (!globalLog.__aegis_activity) {
-    globalLog.__aegis_activity = [];
-  }
-  return globalLog.__aegis_activity;
+  return readLocalStore<ActivityEntry[]>("activity.json", []);
 }
 
 export function logActivity(entry: Omit<ActivityEntry, "id" | "timestamp">): void {
@@ -48,6 +40,8 @@ export function logActivity(entry: Omit<ActivityEntry, "id" | "timestamp">): voi
     id: crypto.randomUUID(),
     timestamp: Math.floor(Date.now() / 1000),
   });
+  if (log.length > 10000) log.splice(0, log.length - 10000);
+  writeLocalStore("activity.json", log);
 }
 
 export function getActivity(user: Address, limit = 50): ActivityEntry[] {

@@ -5,24 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency, formatExpiry, timeRemaining } from "@/lib/utils";
 import { ConnectionGate } from "@/components/ConnectionGate";
 import { Icon } from "@/components/Icon";
-
-interface ApprovalRequest {
-  approvalId: string;
-  permissionId: string;
-  requestId: string;
-  user: string;
-  agentId: string;
-  action: string;
-  amountMinor: string;
-  currency: string;
-  service: string;
-  requestedAt: number;
-  deadline: number;
-  agentNote?: string;
-}
+import type { ApprovalRequest } from "@/lib/approval-store";
 
 interface StoredApproval {
   request: ApprovalRequest;
+  maxAmountMinor?: string;
   result: {
     approvalId: string;
     outcome: "pending" | "approved" | "rejected";
@@ -34,7 +21,7 @@ interface StoredApproval {
 }
 
 export default function ApprovalsPage() {
-  const { isConnected, address } = useAuth();
+  const { isConnected, address, signApproval, authenticatedFetch } = useAuth();
   const [approvals, setApprovals] = useState<StoredApproval[]>([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -46,15 +33,18 @@ export default function ApprovalsPage() {
     if (!address) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/approvals?user=${address}`);
+      const res = await authenticatedFetch(`/api/approvals?user=${address}`);
       const data = await res.json();
+      if (!res.ok) throw new Error(`${data.error ?? "Unable to load approvals"}${data.detail ? `: ${data.detail}` : ""}`);
+      if (!Array.isArray(data)) throw new Error("Invalid approvals response");
       setApprovals(data);
-    } catch {
-      // ignore
+      setSelectedApproval((selected) => selected ? data.find((entry: StoredApproval) => entry.request.approvalId === selected.request.approvalId) ?? null : null);
+    } catch (error) {
+      setMessage(`❌ ${error instanceof Error ? error.message : "Unable to load approvals"}`);
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, authenticatedFetch]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -84,30 +74,26 @@ export default function ApprovalsPage() {
     setMessage(null);
 
     try {
-      // For demo: generate a mock signature
-      // TODO: Real flow: run a fresh passkey ceremony, sign EIP-712 typed data
-      const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32))).map((b) => b.toString(16).padStart(2, "0")).join("")}` as `0x${string}`;
-      const signedAt = Math.floor(Date.now() / 1000);
-
+      const request = selectedApproval?.request;
+      if (!request || request.approvalId !== approvalId) throw new Error("Select the request again.");
+      if (request.deadline <= Math.floor(Date.now() / 1000)) throw new Error("This request has expired.");
       const body =
         outcome === "approved"
           ? {
               outcome: "approved",
-              signer: address,
-              signature: `0x${"ab".repeat(65)}`, // Demo signature placeholder
-              nonce,
-              signedAt,
+              ...await signApproval(request),
+              signedAt: Math.floor(Date.now() / 1000),
             }
-          : { outcome: "rejected", signedAt };
+          : { outcome: "rejected", signedAt: Math.floor(Date.now() / 1000) };
 
-      const res = await fetch(`/api/approvals/${approvalId}/decision`, {
+      const res = await authenticatedFetch(`/api/approvals/${approvalId}/decision`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
       if (res.ok) {
-        setMessage(outcome === "approved" ? "✅ Approved in demo mode" : "✅ Request rejected");
+        setMessage(outcome === "approved" ? "✅ Passkey approval verified" : "✅ Request rejected");
         setSelectedApproval(null);
         loadApprovals();
       } else {
@@ -157,7 +143,7 @@ export default function ApprovalsPage() {
           <h3 className="panel-title no-margin"><Icon name="check" size={17} /> Approval requests</h3>
           <div style={{ display: "flex", gap: 8 }}>
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Auto-refreshing every 5s</span>
-            <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={loadApprovals}>
+            <button aria-label="Refresh approvals" className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={loadApprovals}>
               <Icon name="refresh" size={14} />
             </button>
           </div>
@@ -182,6 +168,14 @@ export default function ApprovalsPage() {
               return (
                 <div
                   key={a.request.approvalId}
+                  role={a.result.outcome === "pending" && !expired ? "button" : undefined}
+                  tabIndex={a.result.outcome === "pending" && !expired ? 0 : undefined}
+                  onKeyDown={(event) => {
+                    if ((event.key === "Enter" || event.key === " ") && a.result.outcome === "pending" && !expired) {
+                      event.preventDefault();
+                      setSelectedApproval(a);
+                    }
+                  }}
                   style={{
                     padding: 16,
                     background: "var(--bg-secondary)",
@@ -248,15 +242,20 @@ export default function ApprovalsPage() {
 
       {/* Approval Modal */}
       {selectedApproval && (
-        <div className="modal-overlay" onClick={() => setSelectedApproval(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => { if (!processing) setSelectedApproval(null); }}>
+          <div className="modal-content" role="dialog" aria-modal="true" aria-label="Action approval" onClick={(e) => e.stopPropagation()}>
             <h3 className="panel-title"><Icon name="key" size={18} /> Action approval</h3>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>
-              Review the details below carefully. This build uses a clearly labeled mock signature until the Mera passkey adapter is connected.
+              Review these structured request fields. Approve opens a fresh passkey prompt and signs EIP-712 typed data.
             </p>
 
             {/* Structured fields only */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+              <div style={{ overflowWrap: "anywhere" }}>Request ID: <code>{selectedApproval.request.requestId}</code></div>
+              <div style={{ overflowWrap: "anywhere" }}>User: <code>{selectedApproval.request.user}</code></div>
+              <div>Currency: <code>{selectedApproval.request.currency}</code>; amount in minor units: <code>{selectedApproval.request.amountMinor}</code></div>
+              <div>Current permission limit: {selectedApproval.maxAmountMinor !== undefined ? formatCurrency(selectedApproval.maxAmountMinor, selectedApproval.request.currency) : "Unavailable"}</div>
+              <div>Deadline (Unix seconds): <code>{selectedApproval.request.deadline}</code></div>
               <div style={{ padding: "12px 16px", background: "var(--bg-secondary)", borderRadius: 10, border: "1px solid var(--border-color)" }}>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>ACTION</div>
                 <div style={{ fontSize: 14, fontWeight: 500 }}>{selectedApproval.request.action}</div>
@@ -313,23 +312,25 @@ export default function ApprovalsPage() {
                 className="btn btn-success"
                 style={{ flex: 1 }}
                 onClick={() => handleDecision(selectedApproval.request.approvalId, "approved")}
-                disabled={processing === selectedApproval.request.approvalId}
+                disabled={processing !== null || selectedApproval.result.outcome !== "pending" || now === null || isExpired(selectedApproval.request.deadline)}
               >
                 {processing === selectedApproval.request.approvalId ? (
                   <span className="animate-pulse">Signing…</span>
                 ) : (
-                  "Approve (Demo)"
+                  isExpired(selectedApproval.request.deadline) ? "Request expired" : "Approve with passkey"
                 )}
               </button>
               <button
                 className="btn btn-danger"
                 style={{ flex: 1 }}
                 onClick={() => handleDecision(selectedApproval.request.approvalId, "rejected")}
-                disabled={processing === selectedApproval.request.approvalId}
+                disabled={processing !== null || selectedApproval.result.outcome !== "pending" || isExpired(selectedApproval.request.deadline)}
               >
                 ✕ Reject
               </button>
             </div>
+            {message?.startsWith("❌") ? <p role="alert" className="alert-error">{message}</p> : null}
+            <button className="btn btn-ghost" disabled={processing !== null} onClick={() => setSelectedApproval(null)}>Close</button>
 
             <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 12, textAlign: "center" }}>
               Only structured values are shown above. The approval is signed with EIP-712 typed data.

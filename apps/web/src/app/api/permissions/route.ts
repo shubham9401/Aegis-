@@ -8,21 +8,16 @@ import { logActivity } from "@/lib/activity-log";
 import { grantPermissionSchema, addressSchema } from "@/lib/validation";
 import { apiError, parseBody } from "@/lib/utils";
 import type { Address, AgentPermission, ActionRule } from "@aegis/sdk";
+import { requireUser } from "@/lib/server-auth";
 
-export async function POST(request: NextRequest) {
+async function grant(request: NextRequest) {
+  const user = await requireUser(request);
+  if (user instanceof Response) return user;
   const parsed = await parseBody(request, grantPermissionSchema);
   if (parsed instanceof Response) return parsed;
 
-  // User address from header (in production, from the authenticated session)
-  const userRaw = request.headers.get("x-aegis-user");
-  const userResult = addressSchema.safeParse(userRaw);
-  if (!userResult.success) {
-    return apiError(400, "VALIDATION_ERROR", "Missing or invalid X-Aegis-User header");
-  }
-  const user = userResult.data as Address;
-
   const now = Math.floor(Date.now() / 1000);
-  const permissionId = `perm-${crypto.randomUUID().slice(0, 8)}`;
+  const permissionId = `perm-${crypto.randomUUID()}`;
 
   const actionRules: ActionRule[] = parsed.actionRules.map((r) => ({
     action: r.action,
@@ -61,7 +56,7 @@ export async function POST(request: NextRequest) {
   }, { status: 201 });
 }
 
-export async function GET(request: NextRequest) {
+async function list(request: NextRequest) {
   const url = new URL(request.url);
   const userRaw = url.searchParams.get("user");
   const userResult = addressSchema.safeParse(userRaw);
@@ -69,6 +64,8 @@ export async function GET(request: NextRequest) {
     return apiError(400, "VALIDATION_ERROR", "Invalid user address");
   }
   const user = userResult.data as Address;
+  const authenticated = await requireUser(request, user);
+  if (authenticated instanceof Response) return authenticated;
 
   const admin = getPermissionAdmin();
   const permissions = await admin.list(user);
@@ -79,7 +76,7 @@ export async function GET(request: NextRequest) {
   return Response.json({ permissions: serialized });
 }
 
-export async function DELETE(request: NextRequest) {
+async function revoke(request: NextRequest) {
   const url = new URL(request.url);
   const userRaw = url.searchParams.get("user");
   const agentId = url.searchParams.get("agentId");
@@ -89,8 +86,14 @@ export async function DELETE(request: NextRequest) {
     return apiError(400, "VALIDATION_ERROR", "Missing user or agentId");
   }
   const user = userResult.data as Address;
+  const authenticated = await requireUser(request, user);
+  if (authenticated instanceof Response) return authenticated;
 
   const admin = getPermissionAdmin();
+  const existing = await admin.list(user);
+  if (!existing.some((p) => p.agentId === agentId)) {
+    return apiError(404, "PERMISSION_NOT_FOUND");
+  }
   const result = await admin.revoke(user, agentId);
 
   logActivity({
@@ -114,3 +117,22 @@ function serializePermission(p: AgentPermission) {
     })),
   };
 }
+
+function handle(handler: (request: NextRequest) => Promise<Response>) {
+  return async (request: NextRequest) => {
+    try {
+      if ((process.env.NEXT_PUBLIC_ADAPTER ?? "demo") !== "demo") {
+        return apiError(503, "ADAPTER_UNAVAILABLE", "Contract/SDK policy mapping requires agreement with teammates 1 and 3.");
+      }
+      const response = await handler(request);
+      response.headers.set("Cache-Control", "no-store");
+      return response;
+    } catch {
+      return apiError(503, "PERMISSION_STORE_UNAVAILABLE", "Permission state could not be read or saved. No success has been confirmed.");
+    }
+  };
+}
+
+export const POST = handle(grant);
+export const GET = handle(list);
+export const DELETE = handle(revoke);

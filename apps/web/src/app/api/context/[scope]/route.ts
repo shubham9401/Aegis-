@@ -8,17 +8,15 @@ import { logActivity } from "@/lib/activity-log";
 import { contextQuerySchema, dataScopeSchema } from "@/lib/validation";
 import { apiError } from "@/lib/utils";
 import type { Address, DataScope } from "@aegis/sdk";
+import { requireAgent } from "@/lib/server-auth";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ scope: string }> },
 ) {
-  // Auth: demo agent token
-  const authHeader = request.headers.get("authorization");
-  const expectedToken = process.env.AEGIS_DEMO_AGENT_TOKEN;
-  if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
-    return apiError(401, "UNAUTHORIZED", "Invalid or missing demo agent token");
-  }
+  try {
+  const identity = await requireAgent(request);
+  if (identity instanceof Response) return identity;
 
   const { scope: rawScope } = await params;
   const scopeResult = dataScopeSchema.safeParse(rawScope);
@@ -36,6 +34,7 @@ export async function GET(
     return apiError(400, "VALIDATION_ERROR", queryResult.error.message);
   }
   const { user, agentId } = queryResult.data;
+  if (agentId !== identity) return apiError(403, "AGENT_MISMATCH", "Token is not bound to this agent");
 
   // Keep the authorization check and plaintext release behind one SDK gate.
   // The callback is never invoked for denied requests.
@@ -81,5 +80,6 @@ export async function GET(
   });
 
   // Return plaintext only on allow. Never log the plaintext.
-  return Response.json({ scope, value: plaintext });
+  return Response.json({ scope, value: plaintext }, { headers: { "Cache-Control": "no-store" } });
+  } catch { return apiError(503, "CONTEXT_UNAVAILABLE", "Permission state or encrypted storage is unavailable"); }
 }
