@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
+import RouteTransition from "@/components/RouteTransition";
+import "@fontsource-variable/manrope/index.css";
 
 export const metadata: Metadata = {
   title: "Aegis — AI Agent Permission Layer",
@@ -21,7 +23,7 @@ export default function RootLayout({
         <div className="bg-glow-2" />
         <Providers>
           <Navbar />
-          <main>{children}</main>
+          <main><RouteTransition>{children}</RouteTransition></main>
         </Providers>
       </body>
     </html>

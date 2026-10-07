@@ -15,7 +15,7 @@ const navLinks: Array<{ href: string; label: string; icon: IconName }> = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { isConnected, address, disconnect } = useAuth();
+  const { isConnected, address, disconnect, isLoading } = useAuth();
 
   return (
     <nav className="navbar">
@@ -35,6 +35,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`nav-link ${pathname === link.href ? "active" : ""}`}
+                aria-current={pathname === link.href ? "page" : undefined}
               >
                 <Icon name={link.icon} size={16} />
                 {link.label}
@@ -49,12 +50,14 @@ export default function Navbar() {
                 <span className="address-chip">
                   {address.slice(0, 6)}…{address.slice(-4)}
                 </span>
-                <button className="nav-signout" onClick={disconnect}>
-                  Disconnect
+                <button className="nav-signout" onClick={disconnect} disabled={isLoading} aria-label="Disconnect account" title="Disconnect account">
+                  <Icon name="logout" size={16} /><span>Disconnect</span>
                 </button>
               </>
             ) : (
-              <span className="address-chip">Offline</span>
+              <span className="connection-icon" role="img" aria-label="Account disconnected" title="Account disconnected">
+                <Icon name="disconnected" size={19} />
+              </span>
             )}
           </div>
         </div>

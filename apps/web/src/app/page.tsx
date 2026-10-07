@@ -74,8 +74,10 @@ export default function HomePage() {
               <span className="panel-kicker">Control plane</span>
               <h2>{isConnected ? "Session active" : "Start a session"}</h2>
             </div>
-            <span className={`status-indicator ${isConnected ? "online" : "offline"}`}>
-              <span className="status-dot" />{isConnected ? "Connected" : "Offline"}
+            <span className={`status-indicator ${isConnected ? "online" : "offline"}`}
+              aria-label={isConnected ? "Session connected" : "Session disconnected"}
+              title={isConnected ? "Session connected" : "Session disconnected"}>
+              {isConnected ? <><span className="status-dot" />Connected</> : <Icon name="disconnected" size={17} />}
             </span>
           </div>
 
@@ -98,7 +100,9 @@ export default function HomePage() {
                 <button className="btn btn-ghost" onClick={refreshBalance}>
                   <Icon name="refresh" size={15} /> Refresh
                 </button>
-                <button className="btn btn-danger-subtle" onClick={disconnect}>Disconnect</button>
+                <button className="btn btn-danger-subtle session-disconnect" onClick={disconnect} disabled={isLoading}>
+                  <Icon name="logout" size={16} /> Disconnect
+                </button>
               </div>
               <div className="session-note">
                 <Icon name="shield" size={15} />
@@ -117,10 +121,12 @@ export default function HomePage() {
                 <span><Icon name="check" size={24} /></span>
               </div>
               <p className="session-description">Create a passkey on this domain, or sign in using the passkey saved for this account.</p>
-              <button className="btn btn-primary btn-block" onClick={hasPasskey ? connect : createPasskey} disabled={isLoading}>
-                {isLoading ? "Waiting for passkey…" : hasPasskey ? "Sign in with passkey" : "Create passkey"}
-              </button>
-              {hasPasskey ? <button className="btn btn-ghost" onClick={createPasskey} disabled={isLoading}>Create another passkey</button> : null}
+              <div className="passkey-actions">
+                <button className="btn btn-primary btn-block" onClick={hasPasskey ? connect : createPasskey} disabled={isLoading}>
+                  {isLoading ? "Waiting for passkey…" : hasPasskey ? "Sign in with passkey" : "Create passkey"}
+                </button>
+                {hasPasskey ? <button className="btn btn-ghost" onClick={createPasskey} disabled={isLoading}>Create another passkey</button> : null}
+              </div>
             </div>
           )}
         </aside>
