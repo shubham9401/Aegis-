@@ -10,6 +10,8 @@ export interface ContextRequest {
   user: Address;
   agentId: string;
   scope: DataScope;
+  /** Numeric Aegis permission ID. Required when the gateway uses contract mode. */
+  permissionId?: string;
 }
 
 export interface ContextRelease {
@@ -95,6 +97,7 @@ export class AegisApiClient {
 
   async requestContext(request: ContextRequest): Promise<ContextRelease> {
     const query = new URLSearchParams({ user: request.user, agentId: request.agentId });
+    if (request.permissionId) query.set("permissionId", request.permissionId);
     return this.#request<ContextRelease>(
       `/api/context/${encodeURIComponent(request.scope)}?${query.toString()}`,
       { method: "GET" },

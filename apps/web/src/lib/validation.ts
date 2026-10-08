@@ -67,6 +67,7 @@ export const vaultBatchWriteSchema = z.object({
 export const contextQuerySchema = z.object({
   user: addressSchema,
   agentId: identifierSchema,
+  permissionId: z.string().regex(/^[1-9]\d*$/, "Expected a positive numeric permission ID").optional(),
 });
 
 // ─── Approval ───

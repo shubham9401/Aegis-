@@ -20,7 +20,7 @@ console.log(`Aegis service: ${baseUrl}`);
 
 for (const scope of plan.requestedDataScopes) {
   try {
-    const released = await api.requestContext({ user, agentId, scope });
+    const released = await api.requestContext({ user, agentId, scope, permissionId });
     console.log(`Released context (${scope}):`, released.value);
   } catch (error) {
     if (error instanceof AegisApiError) {

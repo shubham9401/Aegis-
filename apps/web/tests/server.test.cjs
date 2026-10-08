@@ -33,6 +33,11 @@ test('vault persists ciphertext and reloads it from disk', () => {
     vaultWrite(account.address, 'profile:dietary-preference', 'private 🥗');
     assert.equal(readFileSync(join(directory, 'vault.json'), 'utf8').includes('private'), false);
     assert.equal(vaultDecrypt(account.address.toLowerCase(), 'profile:dietary-preference'), 'private 🥗');
+    const resourceScope = `0x${'45'.repeat(32)}`;
+    vaultWrite(account.address, 'profile:travel-budget', 'USD 500', resourceScope);
+    assert.equal(vaultDecrypt(account.address, 'profile:travel-budget'), null);
+    assert.equal(vaultDecrypt(account.address, 'profile:travel-budget', resourceScope), 'USD 500');
+    assert.equal(vaultDecrypt(account.address, 'profile:travel-budget', `0x${'46'.repeat(32)}`), null);
   } finally {
     assert.ok(resolve(directory).startsWith(resolve(tmpdir()) + require('node:path').sep));
     rmSync(directory, { recursive: true, force: true }); delete process.env.AEGIS_DATA_DIR;

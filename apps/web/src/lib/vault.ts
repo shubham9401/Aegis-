@@ -51,6 +51,7 @@ export function decrypt(ciphertext: string, binding = ""): string {
 
 interface VaultEntry {
   scope: DataScope;
+  resourceScope?: string;
   ciphertext: string; // always stored encrypted
   updatedAt: number;
 }
@@ -67,22 +68,39 @@ function persistVault(store: Map<string, VaultEntry>): void {
   writeLocalStore("vault.json", [...store]);
 }
 
-function vaultKey(user: string, scope: DataScope): string {
-  return `${user.toLowerCase()}:${scope}`;
+function vaultKey(user: string, scope: DataScope, resourceScope?: string): string {
+  const prefix = user.toLowerCase();
+  return resourceScope ? `${prefix}:${resourceScope.toLowerCase()}:${scope}` : `${prefix}:${scope}`;
+}
+
+/** Opaque on-chain scope used as part of the encryption binding in contract mode. */
+export function configuredVaultResourceScope(): string | undefined {
+  if ((process.env.NEXT_PUBLIC_ADAPTER ?? "demo") !== "contract") return undefined;
+  const value = process.env.AEGIS_RESOURCE_SCOPE?.trim();
+  if (!value || !/^0x[a-fA-F0-9]{64}$/.test(value)) {
+    throw new Error("AEGIS_RESOURCE_SCOPE must be configured as bytes32 in contract mode");
+  }
+  return value.toLowerCase();
 }
 
 /** Store a fact encrypted. Plaintext never persisted. */
-export function vaultWrite(user: string, scope: DataScope, plaintext: string): void {
-  vaultWriteBatch(user, [{ scope, value: plaintext }]);
+export function vaultWrite(user: string, scope: DataScope, plaintext: string, resourceScope?: string): void {
+  vaultWriteBatch(user, [{ scope, value: plaintext }], resourceScope);
 }
 
 /** Encrypt every entry before one atomic commit, so failed batches change nothing. */
-export function vaultWriteBatch(user: string, entries: readonly { scope: DataScope; value: string }[]): void {
+export function vaultWriteBatch(
+  user: string,
+  entries: readonly { scope: DataScope; value: string }[],
+  resourceScope?: string,
+): void {
   const store = getVaultStore();
   for (const { scope, value } of entries) {
-    store.set(vaultKey(user, scope), {
+    const key = vaultKey(user, scope, resourceScope);
+    store.set(key, {
       scope,
-      ciphertext: encrypt(value, vaultKey(user, scope)),
+      resourceScope,
+      ciphertext: encrypt(value, key),
       updatedAt: Math.floor(Date.now() / 1000),
     });
   }
@@ -90,25 +108,27 @@ export function vaultWriteBatch(user: string, entries: readonly { scope: DataSco
 }
 
 /** Read an encrypted value. Returns null if not stored. */
-export function vaultReadCiphertext(user: string, scope: DataScope): string | null {
-  const entry = getVaultStore().get(vaultKey(user, scope));
+export function vaultReadCiphertext(user: string, scope: DataScope, resourceScope?: string): string | null {
+  const entry = getVaultStore().get(vaultKey(user, scope, resourceScope));
   return entry?.ciphertext ?? null;
 }
 
 /** Decrypt and return a fact. Only call after a passing Aegis check. */
-export function vaultDecrypt(user: string, scope: DataScope): string | null {
-  const ciphertext = vaultReadCiphertext(user, scope);
+export function vaultDecrypt(user: string, scope: DataScope, resourceScope?: string): string | null {
+  const ciphertext = vaultReadCiphertext(user, scope, resourceScope);
   if (!ciphertext) return null;
-  return decrypt(ciphertext, vaultKey(user, scope));
+  return decrypt(ciphertext, vaultKey(user, scope, resourceScope));
 }
 
 /** List all vault entries for a user (scopes only, no plaintext). */
-export function vaultList(user: string): { scope: DataScope; updatedAt: number }[] {
+export function vaultList(user: string, resourceScope?: string): { scope: DataScope; updatedAt: number }[] {
   const store = getVaultStore();
   const results: { scope: DataScope; updatedAt: number }[] = [];
-  const prefix = user.toLowerCase();
+  const prefix = resourceScope
+    ? `${user.toLowerCase()}:${resourceScope.toLowerCase()}:`
+    : `${user.toLowerCase()}:`;
   for (const [key, entry] of store) {
-    if (key.startsWith(prefix + ":")) {
+    if (key.startsWith(prefix) && entry.resourceScope === resourceScope) {
       results.push({ scope: entry.scope, updatedAt: entry.updatedAt });
     }
   }

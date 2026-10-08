@@ -38,8 +38,10 @@ test("agent API client authenticates context and approval requests", async () =>
     user,
     agentId: "agent-1",
     scope: "profile:dietary-preference",
+    permissionId: "12",
   });
   assert.equal(context.value, "vegetarian");
+  assert.match(calls[0].url, /permissionId=12/);
 
   await client.requestApproval({
     permissionId: "permission-1",
