@@ -5,11 +5,23 @@ import type { Address } from "@aegis/sdk";
 
 /** Format minor units (cents) as a dollar string. */
 export function formatCurrency(minorUnits: string | bigint, currency = "USD"): string {
-  const cents = typeof minorUnits === "bigint" ? Number(minorUnits) : Number(minorUnits);
+  const cents = BigInt(minorUnits);
+  const major = cents / 100n;
+  const fraction = ((cents < 0n ? -cents : cents) % 100n).toString().padStart(2, "0");
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
-  }).format(cents / 100);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).formatToParts(cents < 0n && major === 0n ? -0 : major)
+    .map((part) => part.type === "fraction" ? fraction : part.value).join("");
+}
+
+/** Convert a nonnegative decimal amount to cents without floating-point rounding. */
+export function decimalToMinorUnits(value: string): string {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(value)) throw new Error("Enter a nonnegative amount with at most two decimal places.");
+  const [whole, fraction = ""] = value.split(".");
+  return (BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"))).toString();
 }
 
 /** Format a unix timestamp (seconds) as a human-readable date. */
@@ -61,16 +73,32 @@ export function reasonMessage(reason: string): string {
 
 /** Standard error response shape for all API routes. */
 export function apiError(status: number, reason: string, detail?: string) {
-  return Response.json({ error: reason, detail }, { status });
+  return Response.json({ error: reason, detail }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
 /** Parse an incoming JSON body safely. */
 export async function parseBody<T>(request: Request, schema: { parse: (v: unknown) => T }): Promise<T | Response> {
   try {
-    const body = await request.json();
+    const reader = request.body?.getReader();
+    if (!reader) return apiError(400, "VALIDATION_ERROR", "A JSON request body is required.");
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 16_384) {
+        await reader.cancel();
+        return apiError(413, "BODY_TOO_LARGE", "Request body exceeds 16 KB.");
+      }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+    const body = JSON.parse(new TextDecoder().decode(bytes));
     return schema.parse(body);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Invalid request body";
-    return apiError(400, "VALIDATION_ERROR", msg);
+  } catch {
+    return apiError(400, "VALIDATION_ERROR", "Request body does not match the required schema.");
   }
 }

@@ -37,16 +37,16 @@ const capabilities: Array<{
 ];
 
 export default function HomePage() {
-  const { isConnected, address, balance, isLoading, error, connect, disconnect, refreshBalance } = useAuth();
+  const { isConnected, address, balance, isLoading, error, connect, createPasskey, hasPasskey, disconnect, refreshBalance } = useAuth();
 
   return (
     <div className="page-container home-page">
       <section className="home-hero">
         <div className="hero-copy">
           <div className="eyebrow"><span className="eyebrow-dot" />Trust infrastructure for autonomous agents</div>
-          <h1>Control what agents know.<br /><span>Enforce what they can do.</span></h1>
+          <h1>Choose what agents access.<br /><span>Approve sensitive actions.</span></h1>
           <p className="hero-lead">
-            Aegis is a user-owned permission and enforcement layer for AI agents on Monad—built for narrow context access, bounded actions, and safe delegation.
+            Aegis checks agent requests at integration points against your permissions for context access, actions, limits, and expiry.
           </p>
           <div className="hero-actions">
             {isConnected ? (
@@ -54,9 +54,9 @@ export default function HomePage() {
                 Manage policies <Icon name="arrow" size={16} />
               </Link>
             ) : (
-              <button className="btn btn-primary" onClick={connect} disabled={isLoading}>
+              <button className="btn btn-primary" onClick={hasPasskey ? connect : createPasskey} disabled={isLoading}>
                 <Icon name="key" size={17} />
-                {isLoading ? "Creating session…" : "Connect with passkey"}
+                {isLoading ? "Waiting for passkey…" : hasPasskey ? "Sign in with passkey" : "Create passkey"}
               </button>
             )}
             <Link href="/activity" className="btn btn-ghost">View audit trail</Link>
@@ -74,8 +74,10 @@ export default function HomePage() {
               <span className="panel-kicker">Control plane</span>
               <h2>{isConnected ? "Session active" : "Start a session"}</h2>
             </div>
-            <span className={`status-indicator ${isConnected ? "online" : "offline"}`}>
-              <span className="status-dot" />{isConnected ? "Connected" : "Offline"}
+            <span className={`status-indicator ${isConnected ? "online" : "offline"}`}
+              aria-label={isConnected ? "Session connected" : "Session disconnected"}
+              title={isConnected ? "Session connected" : "Session disconnected"}>
+              {isConnected ? <><span className="status-dot" />Connected</> : <Icon name="disconnected" size={17} />}
             </span>
           </div>
 
@@ -94,16 +96,18 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="session-actions">
+                <a className="btn btn-ghost" href="https://faucet.monad.xyz" target="_blank" rel="noopener noreferrer">Get testnet MON</a>
                 <button className="btn btn-ghost" onClick={refreshBalance}>
                   <Icon name="refresh" size={15} /> Refresh
                 </button>
-                <button className="btn btn-danger-subtle" onClick={disconnect}>Disconnect</button>
+                <button className="btn btn-danger-subtle session-disconnect" onClick={disconnect} disabled={isLoading}>
+                  <Icon name="logout" size={16} /> Disconnect
+                </button>
               </div>
               <div className="session-note">
                 <Icon name="shield" size={15} />
                 <p>
-                <span>Demo</span>
-                Simulated passkey session until the Mera adapter is connected.
+                Mera derives your signing account from your passkey. Sensitive approvals require a fresh passkey prompt.
                 </p>
               </div>
             </div>
@@ -116,10 +120,13 @@ export default function HomePage() {
                 <div className="session-line" />
                 <span><Icon name="check" size={24} /></span>
               </div>
-              <p className="session-description">Create a local demo session to configure policy boundaries and inspect the complete decision flow.</p>
-              <button className="btn btn-primary btn-block" onClick={connect} disabled={isLoading}>
-                {isLoading ? "Creating session…" : "Connect with passkey"}
-              </button>
+              <p className="session-description">Create a passkey on this domain, or sign in using the passkey saved for this account.</p>
+              <div className="passkey-actions">
+                <button className="btn btn-primary btn-block" onClick={hasPasskey ? connect : createPasskey} disabled={isLoading}>
+                  {isLoading ? "Waiting for passkey…" : hasPasskey ? "Sign in with passkey" : "Create passkey"}
+                </button>
+                {hasPasskey ? <button className="btn btn-ghost" onClick={createPasskey} disabled={isLoading}>Create another passkey</button> : null}
+              </div>
             </div>
           )}
         </aside>
@@ -130,7 +137,7 @@ export default function HomePage() {
           <span className="section-label">Request lifecycle</span>
           <strong>One decision boundary.<br />Every agent request.</strong>
         </div>
-        <div className="flow-step"><span>01</span><Icon name="network" /><div><small>Identify</small><strong>Verify the agent</strong></div></div>
+        <div className="flow-step"><span>01</span><Icon name="network" /><div><small>Identify</small><strong>Authenticate the caller</strong></div></div>
         <div className="flow-step"><span>02</span><Icon name="sliders" /><div><small>Evaluate</small><strong>Check live policy</strong></div></div>
         <div className="flow-step"><span>03</span><Icon name="check" /><div><small>Enforce</small><strong>Release or block</strong></div></div>
       </section>
@@ -141,7 +148,7 @@ export default function HomePage() {
             <span className="section-label">Built for enforceable trust</span>
             <h2>Permission records are not enough.<br />Aegis enforces the boundary.</h2>
           </div>
-          <p>Policy checks happen where private context is decrypted and where sensitive actions execute—not merely where permissions are recorded.</p>
+          <p>The server checks permissions before releasing context and accepting approval proofs. Revocation stops future access; agents retain data already disclosed. The vault uses a server-held encryption key.</p>
         </div>
         <div className="capability-grid">
           {capabilities.map((capability) => (

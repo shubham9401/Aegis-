@@ -12,7 +12,7 @@ const DATA_SCOPES = [
 ] as const;
 
 export default function DataVaultPage() {
-  const { isConnected, address } = useAuth();
+  const { isConnected, address, authenticatedFetch } = useAuth();
   const [values, setValues] = useState<Record<string, string>>({});
   const [stored, setStored] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
@@ -21,17 +21,19 @@ export default function DataVaultPage() {
   const loadVaultStatus = useCallback(async () => {
     if (!address) return;
     try {
-      const res = await fetch(`/api/vault?user=${address}`);
+      const res = await authenticatedFetch(`/api/vault?user=${address}`);
       const data = await res.json();
+      if (!res.ok) throw new Error(`${data.error ?? "Unable to load vault"}${data.detail ? `: ${data.detail}` : ""}`);
+      if (!Array.isArray(data.entries)) throw new Error("Invalid vault response");
       const s: Record<string, boolean> = {};
       for (const entry of data.entries ?? []) {
         s[entry.scope] = true;
       }
       setStored(s);
-    } catch {
-      // ignore
+    } catch (error) {
+      setMessage(`❌ ${error instanceof Error ? error.message : "Unable to load vault"}`);
     }
-  }, [address]);
+  }, [address, authenticatedFetch]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -56,11 +58,10 @@ export default function DataVaultPage() {
     }
 
     try {
-      const res = await fetch("/api/vault", {
+      const res = await authenticatedFetch("/api/vault", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "X-Aegis-User": address,
         },
         body: JSON.stringify({ entries }),
       });
@@ -86,7 +87,7 @@ export default function DataVaultPage() {
       <ConnectionGate
         icon="database"
         title="Unlock your private context vault"
-        description="Connect a passkey session to encrypt, store, and manage the context fields agents may request."
+        description="Sign in with a passkey to manage the sample context fields stored by this server."
       />
     );
   }
@@ -95,8 +96,7 @@ export default function DataVaultPage() {
     <div className="page-container">
       <h1 className="page-title">Data Vault</h1>
       <p className="page-subtitle">
-        Store your sample facts encrypted. Plaintext never in Git, chain, or logs.{" "}
-        <span style={{ color: "var(--aegis-accent)" }}>Demo vault, server-held key.</span>
+        Store sample facts encrypted at rest with a server-held key. The server receives plaintext and can decrypt these fields; agent release requires a passing permission check.
       </p>
 
       {/* Vault Status */}
@@ -134,8 +134,9 @@ export default function DataVaultPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {DATA_SCOPES.map((d) => (
             <div key={d.scope}>
-              <label className="label">{d.label}</label>
+              <label className="label" htmlFor={d.scope}>{d.label}</label>
               <input
+                id={d.scope}
                 className="input"
                 placeholder={d.placeholder}
                 value={values[d.scope] ?? ""}
@@ -175,7 +176,7 @@ export default function DataVaultPage() {
         </button>
 
         <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 12, textAlign: "center" }}>
-          Values are encrypted with AES-256-GCM before storage. Plaintext is only released to agents after a passing permission check.
+          The trusted server encrypts values with AES-256-GCM before storage. Revocation prevents future releases; it cannot erase copies agents already received.
         </p>
       </div>
     </div>

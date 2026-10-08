@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatCurrency, formatExpiry, timeRemaining } from "@/lib/utils";
+import { decimalToMinorUnits, formatCurrency, formatExpiry, timeRemaining } from "@/lib/utils";
 import { ConnectionGate } from "@/components/ConnectionGate";
 import { Icon } from "@/components/Icon";
 
@@ -31,19 +31,19 @@ interface SerializedPermission {
 }
 
 export default function PermissionsPage() {
-  const { isConnected, address } = useAuth();
+  const { isConnected, address, authenticatedFetch } = useAuth();
   const [permissions, setPermissions] = useState<SerializedPermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   // Form state
-  const [agentId, setAgentId] = useState("erc8004:monad:travel-agent-001");
+  const [agentId, setAgentId] = useState("");
   const [selectedScopes, setSelectedScopes] = useState<string[]>(["profile:dietary-preference", "profile:travel-budget"]);
   const [action, setAction] = useState<string>("travel:book");
   const [maxAmount, setMaxAmount] = useState("500.00");
   const [approvalThreshold, setApprovalThreshold] = useState("300.00");
   const [currency, setCurrency] = useState("USD");
-  const [allowedServices, setAllowedServices] = useState("demo-airline");
+  const [allowedServices, setAllowedServices] = useState("");
   const [expiryHours, setExpiryHours] = useState("24");
   const [granting, setGranting] = useState(false);
   const [now, setNow] = useState<number | null>(null);
@@ -52,15 +52,16 @@ export default function PermissionsPage() {
     if (!address) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/permissions?user=${address}`);
+      const res = await authenticatedFetch(`/api/permissions?user=${address}`);
       const data = await res.json();
+      if (!res.ok) throw new Error(`${data.error}: ${data.detail ?? "Unable to load permissions"}`);
       setPermissions(data.permissions ?? []);
-    } catch {
-      // ignore
+    } catch (error) {
+      setMessage(`❌ ${error instanceof Error ? error.message : "Unable to load permissions"}`);
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, authenticatedFetch]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -85,11 +86,15 @@ export default function PermissionsPage() {
     setMessage(null);
 
     try {
-      const res = await fetch("/api/permissions", {
+      const maxAmountMinor = decimalToMinorUnits(maxAmount);
+      const requireApprovalAboveMinor = decimalToMinorUnits(approvalThreshold);
+      if (BigInt(requireApprovalAboveMinor) > BigInt(maxAmountMinor)) throw new Error("Approval threshold cannot exceed the spending limit.");
+      const hours = Number(expiryHours);
+      if (!Number.isFinite(hours) || hours <= 0 || hours > 168 || !Number.isInteger(hours * 3600)) throw new Error("Expiry must be greater than zero and at most 168 hours.");
+      const res = await authenticatedFetch("/api/permissions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Aegis-User": address,
         },
         body: JSON.stringify({
           agentId,
@@ -97,20 +102,20 @@ export default function PermissionsPage() {
           actionRules: [
             {
               action,
-              maxAmountMinor: Math.round(parseFloat(maxAmount) * 100).toString(),
+              maxAmountMinor,
               currency,
               allowedServices: allowedServices.split(",").map((s) => s.trim()).filter(Boolean),
-              requireApprovalAboveMinor: Math.round(parseFloat(approvalThreshold) * 100).toString(),
+              requireApprovalAboveMinor,
             },
           ],
-          expiresInSeconds: Math.round(parseFloat(expiryHours) * 3600),
+          expiresInSeconds: hours * 3600,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
         setMessage(`✅ Permission granted: ${data.permissionId}`);
-        loadPermissions();
+        await loadPermissions();
       } else {
         const err = await res.json();
         setMessage(`❌ ${err.error}: ${err.detail ?? ""}`);
@@ -127,13 +132,13 @@ export default function PermissionsPage() {
     if (!confirm(`Revoke all permissions for agent ${agentIdToRevoke}? This cannot be undone.`)) return;
 
     try {
-      const res = await fetch(`/api/permissions?user=${address}&agentId=${encodeURIComponent(agentIdToRevoke)}`, {
+      const res = await authenticatedFetch(`/api/permissions?user=${address}&agentId=${encodeURIComponent(agentIdToRevoke)}`, {
         method: "DELETE",
       });
 
       if (res.ok) {
         setMessage("✅ Permission revoked");
-        loadPermissions();
+        await loadPermissions();
       } else {
         const err = await res.json();
         setMessage(`❌ ${err.error}`);
@@ -150,7 +155,7 @@ export default function PermissionsPage() {
   };
 
   const getStatus = (p: SerializedPermission) => {
-    if (p.revokedAt) return "revoked";
+    if (p.revokedAt !== undefined) return "revoked";
     if (now !== null && p.expiresAt <= now) return "expired";
     return "active";
   };
@@ -160,7 +165,7 @@ export default function PermissionsPage() {
       <ConnectionGate
         icon="sliders"
         title="Open your policy workspace"
-        description="Connect a passkey session to grant, inspect, and revoke bounded permissions for registered agents."
+        description="Connect a passkey session to grant, inspect, and revoke bounded permissions."
       />
     );
   }
@@ -169,6 +174,7 @@ export default function PermissionsPage() {
     <div className="page-container">
       <h1 className="page-title">Permissions</h1>
       <p className="page-subtitle">Grant, view, and revoke agent permissions. The SDK checks every request deterministically.</p>
+      <p className="page-subtitle">Local policy store. Grants and revocations are not yet recorded on Monad; contract integration requires the team’s agreed scope and payment mapping. Agent IDs here are labels, not verified ERC-8004 identities.</p>
 
       {message && (
         <div style={{
@@ -224,11 +230,11 @@ export default function PermissionsPage() {
 
             <div className="form-grid-2">
               <div>
-                <label className="label">Max Amount ($)</label>
+              <label className="label">Max Amount (two decimal units)</label>
                 <input className="input" type="number" step="0.01" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} />
               </div>
               <div>
-                <label className="label">Approval Above ($)</label>
+                <label className="label">Approval Above (two decimal units)</label>
                 <input className="input" type="number" step="0.01" value={approvalThreshold} onChange={(e) => setApprovalThreshold(e.target.value)} />
               </div>
             </div>
@@ -246,10 +252,10 @@ export default function PermissionsPage() {
 
             <div>
               <label className="label">Allowed Services (comma-separated)</label>
-              <input className="input" value={allowedServices} onChange={(e) => setAllowedServices(e.target.value)} placeholder="demo-airline" />
+              <input className="input" value={allowedServices} onChange={(e) => setAllowedServices(e.target.value)} placeholder="Service identifier agreed with the agent" />
             </div>
 
-            <button className="btn btn-primary" onClick={handleGrant} disabled={granting || selectedScopes.length === 0}>
+            <button className="btn btn-primary" onClick={handleGrant} disabled={granting || selectedScopes.length === 0 || !agentId.trim() || !allowedServices.trim()}>
               {granting ? <span className="animate-pulse">Granting…</span> : <><Icon name="shield" size={16} /> Grant Permission</>}
             </button>
           </div>

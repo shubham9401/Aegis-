@@ -1,6 +1,14 @@
 # Deploy to Monad testnet
 
-No wallet or Aegis testnet deployment was created during this session. You can run the contract tests and demo without either. The ABI is already available for teammates.
+Aegis and its demo payment token were deployed successfully to Monad testnet. You can still run the contract tests and local demo without a wallet. The public deployment manifest and ABI are available for teammates.
+
+## Current deployment
+
+- Aegis: `0x37Ba78B771FC28Dc03387c8777997F751120664D`
+- Demo token: `0xdDa9B63b3e2996A62933cea050A46ACb08E987db` (`aUSD-TEST`, 6 decimals, no real value)
+- ERC-8004 Identity Registry: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
+- Token deployment transaction: `0x7c0caea655471bf125d236444fd781d6c8c35ef3082fa6857aeba185143522f9`
+- Aegis deployment transaction: `0x7406590c984b3711380e1f5a378ec05b7e16b296b66878468ddef991247e13fb`
 
 ## 1. Prepare a dedicated testnet deployment account
 
@@ -47,7 +55,7 @@ Run in an interactive terminal. The keystore password prompt does not echo input
 
 If deployment is interrupted, inspect the recorded transaction hashes before retrying. A pending recorded transaction stops automatic retries to prevent duplicate deployments. A successfully recorded token can be reused for the pending Aegis deployment.
 
-This package has not executed the signed live deployment path yet because no funded signer is available. Its network preflight and local EVM deployment paths have been exercised.
+The signed live deployment path completed successfully. Both receipts have status `1`, both addresses contain runtime bytecode, and the deployed Aegis immutables match the registry and token addresses above.
 
 ## 5. Share these files with the team
 
@@ -68,6 +76,6 @@ Never share `.env`, keystores or signing secrets. The ZIP delivered with this pa
 
 ## Verification metadata
 
-Compiler: Solidity 0.8.28. Optimizer enabled, 200 runs, viaIR=true, EVM target shanghai. Bytecode, ABI and Solidity metadata are in `artifacts/AegisPermissions.json`. Compiled input with resolved source files is in `artifacts/standard-input.json` after compilation. Constructor arguments are the registry and payment token addresses in that order. Explorer verification has not been performed because deployment is pending.
+Compiler: Solidity 0.8.28. Optimizer enabled, 200 runs, viaIR=true, EVM target shanghai. Bytecode, ABI and Solidity metadata are in `artifacts/AegisPermissions.json`. Compiled input with resolved source files is in `artifacts/standard-input.json` after compilation. Constructor arguments are the registry and payment token addresses in that order. Explorer source verification has not yet been performed. Deployment receipts and runtime configuration were verified directly through the Monad testnet RPC.
 
 Sources: [network information](https://docs.monad.xyz/developer-essentials/testnet), [official registry deployment list](https://github.com/erc-8004/erc-8004-contracts#monad-testnet).

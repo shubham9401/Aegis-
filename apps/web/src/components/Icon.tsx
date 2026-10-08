@@ -8,6 +8,8 @@ export type IconName =
   | "key"
   | "lock"
   | "network"
+  | "disconnected"
+  | "logout"
   | "refresh"
   | "shield"
   | "sliders"
@@ -26,6 +28,8 @@ const paths: Record<IconName, React.ReactNode> = {
   key: <><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8"/><path d="m16 7 2 2"/><path d="m14 9 2 2"/></>,
   lock: <><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
   network: <><circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="m8 11 8-4"/><path d="m8 13 8 4"/></>,
+  disconnected: <><path d="M3 3l18 18"/><path d="M8.5 8.5A8 8 0 0 1 20 9"/><path d="M4 9a8 8 0 0 1 1.5-1.7"/><path d="M7 13a5 5 0 0 1 3-1.8"/><path d="M14 12.3a5 5 0 0 1 3 1.7"/><circle cx="12" cy="18" r="1"/></>,
+  logout: <><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M9 12h12"/><path d="m17 8 4 4-4 4"/></>,
   refresh: <><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></>,
   shield: <><path d="M12 3 5 6v5c0 4.8 2.8 8.2 7 10 4.2-1.8 7-5.2 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></>,
   sliders: <><path d="M4 6h10"/><path d="M18 6h2"/><path d="M4 12h2"/><path d="M10 12h10"/><path d="M4 18h7"/><path d="M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></>,

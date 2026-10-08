@@ -6,6 +6,7 @@
   "description": "Aegis permission delegation and enforced token spending on Monad testnet",
   "engines": { "node": ">=22" },
   "scripts": {
+    "wallet:create": "node scripts/create-deployer.mjs",
     "compile": "node scripts/compile.mjs",
     "test": "node test/permissions.test.mjs",
     "demo": "node scripts/demo.mjs",
