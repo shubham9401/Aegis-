@@ -1,5 +1,6 @@
 import { AegisApiClient, AegisApiError, type Address } from "@aegis/sdk";
 import { createPlanner, plannerName, planWithFallback } from "./planner-factory.js";
+import { createAgentContextProofProvider } from "./agent-proof.js";
 
 const baseUrl = process.env.AEGIS_WEB_URL ?? "http://localhost:3000";
 const agentToken = requiredEnv("AEGIS_DEMO_AGENT_TOKEN");
@@ -10,7 +11,14 @@ const userRequest =
   process.argv.slice(2).join(" ") ||
   "Plan a vegetarian weekend trip and propose a booking under $500.";
 
-const api = new AegisApiClient({ baseUrl, agentToken });
+const contextProofProvider = process.env.NEXT_PUBLIC_ADAPTER === "contract"
+  ? await createAgentContextProofProvider()
+  : undefined;
+const api = new AegisApiClient({
+  baseUrl,
+  agentToken,
+  ...(contextProofProvider ? { contextProofProvider } : {}),
+});
 const planner = createPlanner();
 const plan = await planWithFallback(planner, userRequest);
 

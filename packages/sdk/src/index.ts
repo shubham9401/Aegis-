@@ -9,6 +9,8 @@ export {
   type ApprovalResult,
   type ContextRelease,
   type ContextRequest,
+  type ContextProof,
+  type ContextProofProvider,
   type WaitForApprovalOptions,
 } from "./http-client.js";
 export { createDelegatedPermission, type DelegatedPermissionInput } from "./delegation.js";

@@ -7,8 +7,8 @@ import { vaultDecrypt } from "@/lib/vault";
 import { logActivity } from "@/lib/activity-log";
 import { contextQuerySchema, dataScopeSchema } from "@/lib/validation";
 import { apiError } from "@/lib/utils";
-import type { Address, DataScope } from "@aegis/sdk";
-import { requireAgent } from "@/lib/server-auth";
+import { CONTRACT_DATA_ACTION, type Address, type DataScope } from "@aegis/sdk";
+import { requireAgent, requireContractAgent } from "@/lib/server-auth";
 import { checkContractContext } from "@/lib/contract-permission";
 
 export async function GET(
@@ -16,9 +16,6 @@ export async function GET(
   { params }: { params: Promise<{ scope: string }> },
 ) {
   try {
-  const identity = await requireAgent(request);
-  if (identity instanceof Response) return identity;
-
   const { scope: rawScope } = await params;
   const scopeResult = dataScopeSchema.safeParse(rawScope);
   if (!scopeResult.success) {
@@ -36,14 +33,23 @@ export async function GET(
     return apiError(400, "VALIDATION_ERROR", queryResult.error.message);
   }
   const { user, agentId, permissionId } = queryResult.data;
-  if (agentId !== identity) return apiError(403, "AGENT_MISMATCH", "Token is not bound to this agent");
+  const contractMode = (process.env.NEXT_PUBLIC_ADAPTER ?? "demo") === "contract";
+  if (contractMode && !permissionId) {
+    return apiError(400, "INVALID_PERMISSION_ID", "permissionId is required in contract mode");
+  }
+  const identity = contractMode
+    ? await requireContractAgent(request, {
+        agentId,
+        permissionId: permissionId!,
+        action: CONTRACT_DATA_ACTION[scope],
+      })
+    : await requireAgent(request);
+  if (identity instanceof Response) return identity;
+  if (agentId !== identity) return apiError(403, "AGENT_MISMATCH", "Authentication is not bound to this agent");
 
-  if ((process.env.NEXT_PUBLIC_ADAPTER ?? "demo") === "contract") {
-    if (!permissionId) {
-      return apiError(400, "INVALID_PERMISSION_ID", "permissionId is required in contract mode");
-    }
+  if (contractMode) {
     const chainDecision = await checkContractContext({
-      permissionId,
+      permissionId: permissionId!,
       user: user as Address,
       agentId,
       dataScope: scope,

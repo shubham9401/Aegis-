@@ -1,8 +1,12 @@
 require('./register.cjs');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { randomBytes } = require('node:crypto');
+const { mkdtempSync, rmSync } = require('node:fs');
+const { tmpdir } = require('node:os');
+const { join } = require('node:path');
 const { privateKeyToAccount, generatePrivateKey } = require('viem/accounts');
-const { createChallenge, verifyChallenge, requireUser, requireAgent, endSession } = require('../src/lib/server-auth.ts');
+const { createChallenge, verifyChallenge, requireUser, requireAgent, requireContractAgent, endSession } = require('../src/lib/server-auth.ts');
 const origin = 'http://localhost:3000';
 function req(path, body, cookie = '', extra = {}) {
   return new Request(origin + path, { method: body === undefined ? 'GET' : 'POST', headers: { origin, 'content-type': 'application/json', cookie, ...extra }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -49,5 +53,46 @@ test('agent auth requires secret and an explicitly configured identity', async (
   } finally {
     if (previousToken === undefined) delete process.env.AEGIS_DEMO_AGENT_TOKEN; else process.env.AEGIS_DEMO_AGENT_TOKEN = previousToken;
     if (previousId === undefined) delete process.env.AEGIS_AGENT_ID; else process.env.AEGIS_AGENT_ID = previousId;
+  }
+});
+
+test('contract agent proof binds permission fields and blocks replay', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'aegis-agent-proof-'));
+  const account = privateKeyToAccount(generatePrivateKey());
+  const contract = privateKeyToAccount(generatePrivateKey()).address;
+  const resourceScope = `0x${randomBytes(32).toString('hex')}`;
+  const requestId = `0x${randomBytes(32).toString('hex')}`;
+  const deadline = Math.floor(Date.now() / 1000) + 60;
+  const previous = Object.fromEntries(['AEGIS_DATA_DIR', 'AEGIS_AGENT_ID', 'AEGIS_AGENT_ADDRESS',
+    'AEGIS_CONTRACT_ADDRESS', 'AEGIS_RESOURCE_SCOPE', 'AEGIS_APP_ORIGIN'].map((key) => [key, process.env[key]]));
+  try {
+    process.env.AEGIS_DATA_DIR = directory;
+    process.env.AEGIS_AGENT_ID = '7';
+    process.env.AEGIS_AGENT_ADDRESS = account.address;
+    process.env.AEGIS_CONTRACT_ADDRESS = contract;
+    process.env.AEGIS_RESOURCE_SCOPE = resourceScope;
+    process.env.AEGIS_APP_ORIGIN = origin;
+    const signature = await account.signTypedData({
+      domain: { name: 'AegisDataGateway', version: '1', chainId: 10143, verifyingContract: contract },
+      types: { DataRequest: [
+        { name: 'permissionId', type: 'uint256' }, { name: 'scope', type: 'bytes32' },
+        { name: 'action', type: 'uint256' }, { name: 'requestId', type: 'bytes32' },
+        { name: 'deadline', type: 'uint64' }, { name: 'audience', type: 'string' },
+      ] },
+      primaryType: 'DataRequest',
+      message: { permissionId: 12n, scope: resourceScope, action: 16n, requestId,
+        deadline: BigInt(deadline), audience: origin },
+    });
+    const signed = () => new Request(`${origin}/api/context/profile:travel-budget`, { headers: {
+      'x-aegis-request-id': requestId, 'x-aegis-deadline': String(deadline), 'x-aegis-signature': signature,
+    } });
+    assert.equal(await requireContractAgent(signed(), { agentId: '7', permissionId: '12', action: 16n }), '7');
+    assert.equal((await requireContractAgent(signed(), { agentId: '7', permissionId: '12', action: 16n })).status, 409);
+    assert.equal((await requireContractAgent(signed(), { agentId: '7', permissionId: '13', action: 16n })).status, 401);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
   }
 });

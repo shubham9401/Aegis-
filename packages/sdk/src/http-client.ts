@@ -4,7 +4,16 @@ export interface AegisApiClientOptions {
   baseUrl: string;
   agentToken: string;
   fetchImpl?: typeof fetch;
+  contextProofProvider?: ContextProofProvider;
 }
+
+export interface ContextProof {
+  requestId: `0x${string}`;
+  deadline: number;
+  signature: `0x${string}`;
+}
+
+export type ContextProofProvider = (request: ContextRequest) => Promise<ContextProof>;
 
 export interface ContextRequest {
   user: Address;
@@ -84,8 +93,9 @@ export class AegisApiClient {
   readonly #baseUrl: string;
   readonly #agentToken: string;
   readonly #fetch: typeof fetch;
+  readonly #contextProofProvider: ContextProofProvider | undefined;
 
-  constructor({ baseUrl, agentToken, fetchImpl = globalThis.fetch }: AegisApiClientOptions) {
+  constructor({ baseUrl, agentToken, fetchImpl = globalThis.fetch, contextProofProvider }: AegisApiClientOptions) {
     if (!baseUrl) throw new Error("Aegis API base URL is required");
     if (!agentToken) throw new Error("Aegis agent token is required");
     if (typeof fetchImpl !== "function") throw new Error("A fetch implementation is required");
@@ -93,14 +103,22 @@ export class AegisApiClient {
     this.#baseUrl = baseUrl.replace(/\/$/, "");
     this.#agentToken = agentToken;
     this.#fetch = fetchImpl;
+    this.#contextProofProvider = contextProofProvider;
   }
 
   async requestContext(request: ContextRequest): Promise<ContextRelease> {
     const query = new URLSearchParams({ user: request.user, agentId: request.agentId });
     if (request.permissionId) query.set("permissionId", request.permissionId);
+    const headers = new Headers();
+    if (this.#contextProofProvider) {
+      const proof = await this.#contextProofProvider(request);
+      headers.set("X-Aegis-Request-Id", proof.requestId);
+      headers.set("X-Aegis-Deadline", proof.deadline.toString());
+      headers.set("X-Aegis-Signature", proof.signature);
+    }
     return this.#request<ContextRelease>(
       `/api/context/${encodeURIComponent(request.scope)}?${query.toString()}`,
-      { method: "GET" },
+      { method: "GET", headers },
       true,
     );
   }

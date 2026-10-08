@@ -32,6 +32,11 @@ test("agent API client authenticates context and approval requests", async () =>
     baseUrl: "http://localhost:3000/",
     agentToken: "demo-token",
     fetchImpl,
+    contextProofProvider: async () => ({
+      requestId: `0x${"12".repeat(32)}`,
+      deadline: 200,
+      signature: `0x${"34".repeat(65)}`,
+    }),
   });
 
   const context = await client.requestContext({
@@ -42,6 +47,9 @@ test("agent API client authenticates context and approval requests", async () =>
   });
   assert.equal(context.value, "vegetarian");
   assert.match(calls[0].url, /permissionId=12/);
+  assert.equal(new Headers(calls[0].init.headers).get("x-aegis-request-id"), `0x${"12".repeat(32)}`);
+  assert.equal(new Headers(calls[0].init.headers).get("x-aegis-deadline"), "200");
+  assert.equal(new Headers(calls[0].init.headers).get("x-aegis-signature"), `0x${"34".repeat(65)}`);
 
   await client.requestApproval({
     permissionId: "permission-1",

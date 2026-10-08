@@ -34,6 +34,7 @@ MONAD_RPC_URL=https://testnet-rpc.monad.xyz
 AEGIS_CONTRACT_ADDRESS=0xCurrentAegisDeployment
 AEGIS_AGENT_ID=123
 AEGIS_AGENT_ADDRESS=0xCurrentErc8004Owner
+AEGIS_AGENT_KEYSTORE_PATH=C:\path\outside\the\repo\agent.json
 AEGIS_RESOURCE_SCOPE=0xRandom64HexCharacters
 ```
 
@@ -46,6 +47,15 @@ The connected agent sends the numeric permission ID with each context request.
 The SDK includes it automatically when `permissionId` is supplied to
 `requestContext`.
 
-The current bearer token is a hackathon transport credential bound to one
-configured agent ID. The next security step is replacing it with a short-lived,
-replay-protected EIP-712 request signed by the current ERC-8004 owner.
+In contract mode the connected demo loads the encrypted agent keystore from
+outside the repository and asks for its password privately. Every context call
+uses a fresh EIP-712 proof bound to permission ID, opaque scope, action, random
+request ID, short deadline, gateway audience, chain ID, and Aegis contract.
+The context gateway verifies the ERC-8004 owner's signature and persists
+consumed request IDs before checking Monad, preventing replay. The existing
+off-chain action-approval queue still uses its bearer transport credential;
+the payment phase must replace that with `approvePayment` and `pay` calls.
+
+The hackathon signer currently supports ERC-8004 identities owned by an EOA
+stored as an encrypted JSON keystore. A smart-contract-owned identity needs an
+ERC-1271 verification adapter before contract mode can accept its proofs.
