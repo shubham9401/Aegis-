@@ -16,6 +16,6 @@
     "deploy:testnet": "node --env-file-if-exists=.env scripts/deploy.mjs",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": { "@openzeppelin/contracts": "5.4.0", "ethers": "6.15.0" },
+  "dependencies": { "@openzeppelin/contracts": "5.4.0", "ethers": "6.17.0" },
   "devDependencies": { "ganache": "7.9.2", "solc": "0.8.28", "typescript": "5.9.3", "@types/node": "22.18.6" }
 }
