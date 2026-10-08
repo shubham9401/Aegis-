@@ -13,7 +13,7 @@ Aegis is a user-controlled trust and permission layer for AI agents. It lets use
 
 ## Build status
 
-The TypeScript workspace, permission engine, local permission adapter, command-line agent demo, web dashboard, and Solidity contract package are working locally. Aegis is deployed to Monad testnet at `0x37Ba78B771FC28Dc03387c8777997F751120664D`, with demo token `aUSD-TEST` at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. The web context endpoint uses the SDK's gated read so decryption happens only inside the allowed callback. The app and SDK still need to replace their local permission adapter with the deployed contract; the vault uses a server-held demo key, and approval signatures remain a labeled mock until Mera is connected.
+The TypeScript workspace, permission engine, local permission adapter, command-line agent demo, web dashboard, and Solidity contract package are working locally. Aegis is deployed to Monad testnet at `0x37Ba78B771FC28Dc03387c8777997F751120664D`, with demo token `aUSD-TEST` at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. The web context endpoint uses the SDK's gated read so decryption happens only inside the allowed callback. Mera passkeys now provide signed login and EIP-712 approval proofs that the server verifies. The app and SDK still need to replace their local permission adapter with the deployed contract, submit approvals on-chain, and move beyond the vault's server-held demo key.
 
 ## Run locally
 
@@ -36,7 +36,7 @@ To prove that a separate agent application can integrate Aegis, first start the 
 npm run demo:web
 ```
 
-The connected demo requests scoped context through the protected API, creates an approval request, and waits for the user to decide it in the Approvals dashboard. It executes the simulated booking only after an approved result. The current approval signature is still a clearly labeled placeholder until the Mera integration is complete.
+The connected demo requests scoped context through the protected API, creates an approval request, and waits for the user to decide it in the Approvals dashboard. It executes the simulated booking only after the server verifies the user's Mera-derived EIP-712 approval. Booking execution is still simulated until that approval is connected to the deployed contract's payment flow.
 
 Without `KIMI_API_KEY`, the demo uses a deterministic local planner. To enable Kimi, copy `.env.example` to `.env.local`, insert a newly generated Kimi Open Platform key, and run `npm run demo`. Never commit or share the key.
 
@@ -46,4 +46,4 @@ The Kimi planner is a planning component only; Aegis independently checks its re
 
 ## First integration decisions
 
-Before connecting the SDK to the chain, agree on permission IDs, parent links, revocation lookup, public methods, and events with Teammate 1. The web app now provides the integration boundary for Teammate 2, but the real Mera ceremony and server-side approval verification are still required. The current encrypted vault is intentionally labeled as a server-held-key demo; production key custody must remain user controlled.
+Before connecting the SDK to the chain, agree on permission IDs, parent links, revocation lookup, public methods, and events with Teammate 1. The Mera ceremony and server-side approval verification are implemented; the remaining work is translating that approval into the exact on-chain action. The current encrypted vault is intentionally labeled as a server-held-key demo; production key custody must remain user controlled.

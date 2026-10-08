@@ -11,7 +11,7 @@
 - [ ] Confirm contract methods, permission fields, and events with Teammate 1.
 - [x] Connect the SDK enforcement boundary to Teammate 2's web API and encrypted demo vault.
 - [x] Add a connected agent-app demo that requests scoped context and waits for a dashboard approval.
-- [ ] Replace Teammate 2's labeled mock approval with the real Mera passkey ceremony and server verification.
+- [x] Replace the labeled mock approval with a real Mera passkey ceremony and server-side EIP-712 verification.
 - [x] Define SDK request and result types.
 - [x] Add developer-facing `checkPermission()`, context-release, approval-request, and approval-polling APIs.
 - [x] Fail closed when a money-constrained action omits its amount.
@@ -33,7 +33,7 @@
 
 ## Security boundary
 
-The current delegation and revoke-cascade behavior is evaluated by the local SDK against `MemoryPermissionStore`; it is not yet enforced by a Monad contract. The web app encrypts demo values with AES-GCM and calls decryption only through `readData()`, but its key is still server held. Already released plaintext cannot be revoked. Approval creation now rechecks the action and permission ID, while approval signing remains an explicitly labeled mock until Mera is integrated.
+The current delegation and revoke-cascade behavior is evaluated by the local SDK against `MemoryPermissionStore`; it is not yet enforced by a Monad contract. The web app encrypts demo values with AES-GCM and calls decryption only through `readData()`, but its key is still server held. Already released plaintext cannot be revoked. Approval creation rechecks the action and permission ID, and the Mera-derived EIP-712 approval is verified server-side; the approved action is not submitted to the contract yet.
 
 ## Decisions and blockers
 

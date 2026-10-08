@@ -48,7 +48,7 @@ try {
 
   console.log(`Approval requested: ${pending.request.approvalId}`);
   console.log("Open the Aegis Approvals page and approve or reject the request.");
-  console.log("Current web approval is a demo placeholder until Mera verification is connected.");
+  console.log("Approve with the Mera passkey in Aegis. The server verifies the signed decision before returning it.");
 
   const decided = await api.waitForApproval(pending.request.approvalId, {
     intervalMs: 1_000,

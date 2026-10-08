@@ -119,7 +119,7 @@ export class AegisApiClient {
     return this.#request<ApprovalRecord>(
       `/api/approvals/${encodeURIComponent(approvalId)}`,
       { method: "GET" },
-      false,
+      true,
     );
   }
 

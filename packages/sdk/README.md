@@ -65,7 +65,7 @@ if (decided.result.outcome !== "approved") {
 }
 ```
 
-The current web approval is explicitly a demo placeholder. Treat an `approved` result as authoritative only after Teammate 2 replaces it with a verified Mera/WebAuthn signature flow.
+The web app now creates a fresh Mera/WebAuthn signing session for each sensitive approval and verifies the resulting EIP-712 signature on the server. The approval is still off-chain: it does not call the deployed contract's `approvePayment` or `pay` functions yet.
 
 `MemoryPermissionStore` is only for local development. The Monad adapter will implement the same `PermissionStore` interface after the smart-contract ABI is agreed with Teammate 1.
 

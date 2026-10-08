@@ -61,8 +61,9 @@ test("agent API client authenticates context and approval requests", async () =>
 
 test("agent API client polls until the user decides", async () => {
   let polls = 0;
-  const fetchImpl = async () => {
+  const fetchImpl = async (_url, init) => {
     polls += 1;
+    assert.equal(new Headers(init.headers).get("authorization"), "Bearer demo-token");
     return Response.json({
       request: {
         approvalId: "approval-1",

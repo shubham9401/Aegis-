@@ -19,7 +19,7 @@ npm run dev:web
 
 Open [localhost:3000](http://localhost:3000). Create a passkey once, then sign in with that credential. Mera derives the account from WebAuthn PRF; localStorage contains only credential metadata. Localhost passkeys do not work on the final domain. The provider must support PRF; errors explain unsupported authenticators. Fund the displayed account through the [Monad faucet](https://faucet.monad.xyz) before any future on-chain writes.
 
-The configured `AEGIS_AGENT_ID` must match grants and agent requests. Every agent endpoint, including approval polling, requires its bearer token. The existing teammate 3 SDK omits that header when polling and needs the change described in the audit.
+The configured `AEGIS_AGENT_ID` must match grants and agent requests. Every agent endpoint, including approval polling, requires its bearer token; the teammate 3 SDK sends that token for context, approval creation, and polling.
 
 ## Implemented security boundary
 
