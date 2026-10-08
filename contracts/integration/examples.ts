@@ -11,7 +11,8 @@ export function travelGrant(agentId: bigint, merchant: `0x${string}`, decimals: 
   return {
     agentId,
     scope: hexlify(randomBytes(32)) as `0x${string}`,
-    actions: ACTION.READ_DIETARY | ACTION.READ_DESTINATION | ACTION.READ_ITINERARY | ACTION.PAY,
+    actions: ACTION.READ_DIETARY | ACTION.READ_DESTINATION | ACTION.READ_ITINERARY
+      | ACTION.READ_TRAVEL_BUDGET | ACTION.READ_PASSPORT_VALIDITY | ACTION.PAY,
     spendingLimit: parseUnits('500', decimals),
     expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400),
     canDelegate: true,

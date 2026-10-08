@@ -1,5 +1,12 @@
 /** All amounts are integer payment-token units. aUSD-TEST uses 6 decimals; no real value. */
-export const ACTION = { READ_DIETARY: 1n, READ_DESTINATION: 2n, READ_ITINERARY: 4n, PAY: 8n } as const;
+export const ACTION = {
+  READ_DIETARY: 1n,
+  READ_DESTINATION: 2n,
+  READ_ITINERARY: 4n,
+  PAY: 8n,
+  READ_TRAVEL_BUDGET: 16n,
+  READ_PASSPORT_VALIDITY: 32n,
+} as const;
 export const STATUS = {
   Allowed: 0n, NotFound: 1n, Revoked: 2n, Expired: 3n, IdentityChanged: 4n,
   WrongAgent: 5n, InvalidAction: 6n, ActionNotAllowed: 7n, WrongScope: 8n,

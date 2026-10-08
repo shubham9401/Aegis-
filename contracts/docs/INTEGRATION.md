@@ -22,6 +22,8 @@ Actions:
 | READ_DESTINATION | 2 |
 | READ_ITINERARY | 4 |
 | PAY | 8 |
+| READ_TRAVEL_BUDGET | 16 |
+| READ_PASSPORT_VALIDITY | 32 |
 
 Combine actions using bitwise OR for grants. Requests must use exactly one action bit. Unknown bits are rejected. A data-only grant has spendingLimit=0 and paymentRecipient=zero address. A PAY grant must have an allowed recipient, even when its automatic limit is zero (manual-only payments).
 

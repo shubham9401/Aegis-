@@ -16,6 +16,7 @@ test('grants identify the user and registry owner; checks reject wrong identity,
   assert.equal(p.user, f.addresses[0]); assert.equal(p.agent, f.addresses[1]);
   assert.equal(p.agentId, 0n); // ERC-8004 token ID zero is valid.
   assert.equal(await f.aegis.checkPermission(id, f.addresses[1], 1n, f.scope), Status.Allowed);
+  assert.equal(await f.aegis.checkPermission(id, f.addresses[1], 16n, f.scope), Status.ActionNotAllowed);
   assert.equal(await f.aegis.checkPermission(id, f.addresses[2], 1n, f.scope), Status.WrongAgent);
   assert.equal(await f.aegis.checkPermission(id, f.addresses[1], 1n, requestId()), Status.WrongScope);
   assert.equal(await f.aegis.checkPermission(id, f.addresses[1], 3n, f.scope), Status.InvalidAction);
@@ -26,13 +27,16 @@ test('grants identify the user and registry owner; checks reject wrong identity,
 
 test('invalid grants cannot create open-ended scope, unknown actions, or invalid payment recipients', async t => {
   const f = await setup(t);
-  for (const invalid of [{ scope: '0x' + '00'.repeat(32) }, { actions: 0n }, { actions: 16n },
+  for (const invalid of [{ scope: '0x' + '00'.repeat(32) }, { actions: 0n }, { actions: 64n },
     { expiresAt: f.now }, { paymentRecipient: ZeroAddress },
     { actions: 1n, spendingLimit: 0n }, { paymentRecipient: await f.aegis.getAddress() }]) {
     await denied(f.grant(invalid));
   }
   const id = await f.grant({ actions: 1n, spendingLimit: 0n, paymentRecipient: ZeroAddress });
   assert.equal(await f.aegis.permissionStatus(id), Status.Allowed);
+  const profileId = await f.grant({ actions: 49n, spendingLimit: 0n, paymentRecipient: ZeroAddress });
+  assert.equal(await f.aegis.checkPermission(profileId, f.addresses[1], 16n, f.scope), Status.Allowed);
+  assert.equal(await f.aegis.checkPermission(profileId, f.addresses[1], 32n, f.scope), Status.Allowed);
 });
 
 test('delegation permits only narrower actions, budgets, expiry and approved depth', async t => {

@@ -18,7 +18,9 @@ contract AegisPermissions is ReentrancyGuard {
     uint256 public constant READ_DESTINATION = 2;
     uint256 public constant READ_ITINERARY = 4;
     uint256 public constant PAY = 8;
-    uint256 public constant ALL_ACTIONS = 15;
+    uint256 public constant READ_TRAVEL_BUDGET = 16;
+    uint256 public constant READ_PASSPORT_VALIDITY = 32;
+    uint256 public constant ALL_ACTIONS = 63;
     uint8 public constant MAX_DEPTH = 4;
 
     enum Status { Allowed, NotFound, Revoked, Expired, IdentityChanged, WrongAgent,
