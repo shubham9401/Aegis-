@@ -1,0 +1,11 @@
+{
+  "chainId": "10143",
+  "registryAddress": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "label": "travel-agent",
+  "agentId": "2088",
+  "owner": "0x5d4a8bd54999A12183AAD386537d71F71668ea2B",
+  "agentUri": "data:application/json;base64,eyJuYW1lIjoiQWVnaXMgVHJhdmVsIEFnZW50IiwiZGVzY3JpcHRpb24iOiJQZXJtaXNzaW9uZWQgQUkgdHJhdmVsIGFnZW50IGRlbW8gZm9yIEFlZ2lzIG9uIE1vbmFkLiJ9",
+  "transactionHash": "0x358f3260b7e6626812fdfa08d7dcc296ce417d7d14cee9191c46a3941514e70d",
+  "blockNumber": 69541542,
+  "status": "registered"
+}
