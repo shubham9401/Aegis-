@@ -4,11 +4,11 @@ Aegis and its demo payment token were deployed successfully to Monad testnet. Yo
 
 ## Current deployment
 
-- Aegis: `0x37Ba78B771FC28Dc03387c8777997F751120664D`
+- Aegis: `0xeDB8F11c9b6F67ba1D51a4cEdc5151D41e4Bfdb3`
 - Demo token: `0xdDa9B63b3e2996A62933cea050A46ACb08E987db` (`aUSD-TEST`, 6 decimals, no real value)
 - ERC-8004 Identity Registry: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
 - Token deployment transaction: `0x7c0caea655471bf125d236444fd781d6c8c35ef3082fa6857aeba185143522f9`
-- Aegis deployment transaction: `0x7406590c984b3711380e1f5a378ec05b7e16b296b66878468ddef991247e13fb`
+- Aegis deployment transaction: `0xf4871122c1953621af07faed265851e79b547926461599100427c48a73de8fa2`
 
 ## 1. Prepare a dedicated testnet deployment account
 

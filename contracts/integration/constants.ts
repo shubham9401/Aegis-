@@ -15,7 +15,7 @@ export const STATUS = {
 export const MONAD_TESTNET = {
   chainId: 10143, rpcUrl: 'https://testnet-rpc.monad.xyz',
   identityRegistry: '0x8004A818BFB912233c491871b3d84c89A494BD9e',
-  aegisPermissions: '0x37Ba78B771FC28Dc03387c8777997F751120664D',
+  aegisPermissions: '0xeDB8F11c9b6F67ba1D51a4cEdc5151D41e4Bfdb3',
   paymentToken: '0xdDa9B63b3e2996A62933cea050A46ACb08E987db',
   paymentTokenSymbol: 'aUSD-TEST',
   paymentTokenDecimals: 6,

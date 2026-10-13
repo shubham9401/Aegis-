@@ -14,7 +14,7 @@ The original division is workable with these changes:
 - ABI, TypeScript constants/examples, deployment script and integration guide.
 - Tests for delegation expansion, shared budgets, identity changes, expiry, revocation, replay and owner approval.
 
-Deployed: Aegis is live on Monad testnet at `0x37Ba78B771FC28Dc03387c8777997F751120664D`, using `aUSD-TEST` at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. Use `deployments/monad-testnet.json` and the checked-in integration constants; do not use a local demo address.
+Deployed: Aegis is live on Monad testnet at `0xeDB8F11c9b6F67ba1D51a4cEdc5151D41e4Bfdb3`, using `aUSD-TEST` at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. Use `deployments/monad-testnet.json` and the checked-in integration constants; do not use a local demo address.
 
 ## Teammate 2 — dashboard, user wallet and encrypted profile
 

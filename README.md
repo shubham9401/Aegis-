@@ -13,7 +13,7 @@ Aegis is a user-controlled trust and permission layer for AI agents. It lets use
 
 ## Build status
 
-The TypeScript workspace, permission engine, local permission adapter, command-line agent demo, web dashboard, and Solidity contract package are working locally. Aegis is deployed to Monad testnet at `0x37Ba78B771FC28Dc03387c8777997F751120664D`, with demo token `aUSD-TEST` at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. The web context endpoint uses the SDK's gated read so decryption happens only inside the allowed callback. Mera passkeys now provide signed login and EIP-712 approval proofs that the server verifies. The app and SDK still need to replace their local permission adapter with the deployed contract, submit approvals on-chain, and move beyond the vault's server-held demo key.
+The TypeScript workspace, SDK, web dashboard, encrypted demo vault, agent demo, and Solidity contracts work together. Aegis is deployed to Monad testnet at `0xeDB8F11c9b6F67ba1D51a4cEdc5151D41e4Bfdb3`, with test token `aUSD-TEST` at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. In contract mode, Mera passkey accounts grant and revoke permissions, record exact one-use payment approvals, and fund the test vault. The encrypted context gateway checks the live contract before each release, and the registered ERC-8004 agent owner executes approved payments through `AegisPermissions.pay`. The remaining production limitation is the server-held demo vault key; it is explicitly not a claim that already released data can be revoked.
 
 ## Run locally
 
@@ -36,7 +36,7 @@ To prove that a separate agent application can integrate Aegis, first start the 
 npm run demo:web
 ```
 
-The connected demo requests scoped context through the protected API, creates an approval request, and waits for the user to decide it in the Approvals dashboard. It executes the simulated booking only after the server verifies the user's Mera-derived EIP-712 approval. Booking execution is still simulated until that approval is connected to the deployed contract's payment flow.
+The connected demo signs scoped context requests with the registered agent wallet, requests an amount above the permission's automatic cap, and waits for the user in the Approvals dashboard. In contract mode, the passkey account records consent with `approvePayment`, and the agent executes the exact payment through the Aegis vault. Plaintext context values are deliberately omitted from terminal logs.
 
 Without `KIMI_API_KEY`, the demo uses a deterministic local planner. To enable Kimi, copy `.env.example` to `.env.local`, insert a newly generated Kimi Open Platform key, and run `npm run demo`. Never commit or share the key.
 
@@ -44,6 +44,6 @@ If Kimi is unavailable because of balance, authentication, or network problems, 
 
 The Kimi planner is a planning component only; Aegis independently checks its requested data and actions. The SDK tests can be run with `npm test`.
 
-## First integration decisions
+## Security boundary
 
-Before connecting the SDK to the chain, agree on permission IDs, parent links, revocation lookup, public methods, and events with Teammate 1. The Mera ceremony and server-side approval verification are implemented; the remaining work is translating that approval into the exact on-chain action. The current encrypted vault is intentionally labeled as a server-held-key demo; production key custody must remain user controlled.
+The contract is the authorization source in contract mode; the local queue only transports pending approval requests. Payment consent is exact and one-use: permission ID, request ID, token amount, recipient, and deadline must match. The current encrypted vault is intentionally labeled as a server-held-key demo; production key custody must remain user controlled.

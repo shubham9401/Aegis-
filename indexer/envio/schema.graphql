@@ -1,0 +1,34 @@
+type Permission {
+  id: ID!
+  user: String!
+  parentId: BigInt!
+  agentId: BigInt!
+  agent: String!
+  scope: String!
+  actions: BigInt!
+  spendingLimit: BigInt!
+  expiresAt: BigInt!
+  canDelegate: Boolean!
+  paymentRecipient: String!
+  revoked: Boolean!
+  revokedBy: String
+  lastBlock: Int!
+}
+
+type AegisActivity {
+  id: ID!
+  kind: String!
+  permissionId: BigInt!
+  rootId: BigInt
+  requestId: String
+  user: String
+  agent: String
+  actor: String
+  recipient: String
+  action: BigInt
+  amount: BigInt
+  manuallyApproved: Boolean
+  deadline: BigInt
+  blockNumber: Int!
+  timestamp: Int!
+}

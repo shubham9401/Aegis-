@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: aegis-monad-activity
+description: Public permission, revocation, approval and use receipts from Aegis on Monad testnet
+contracts:
+  - name: AegisPermissions
+    events:
+      - event: "PermissionGranted(uint256 indexed permissionId, address indexed user, uint256 indexed parentId, uint256 agentId, address agent, bytes32 scope, uint256 actions, uint256 spendingLimit, uint64 expiresAt, bool canDelegate, address paymentRecipient)"
+      - event: "PermissionRevoked(uint256 indexed permissionId, address indexed revokedBy)"
+      - event: "PermissionUsed(uint256 indexed permissionId, uint256 indexed rootId, bytes32 indexed requestId, uint256 action, address agent, uint256 amount, address recipient, bool manuallyApproved)"
+      - event: "PaymentApproved(uint256 indexed permissionId, bytes32 indexed requestId, address indexed user, address recipient, uint256 amount, uint64 deadline)"
+chains:
+  - id: 10143
+    start_block: 0
+    contracts:
+      - name: AegisPermissions
+        address: "0xeDB8F11c9b6F67ba1D51a4cEdc5151D41e4Bfdb3"

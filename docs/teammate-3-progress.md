@@ -8,7 +8,7 @@
 
 ## Status
 
-- [ ] Confirm contract methods, permission fields, and events with Teammate 1.
+- [x] Confirm contract methods, permission fields, and events with Teammate 1.
 - [x] Connect the SDK enforcement boundary to Teammate 2's web API and encrypted demo vault.
 - [x] Add a connected agent-app demo that requests scoped context and waits for a dashboard approval.
 - [x] Replace the labeled mock approval with a real Mera passkey ceremony and server-side EIP-712 verification.
@@ -19,21 +19,24 @@
 - [x] Create narrowed delegated permissions and recheck parent chains for revocation and expiry.
 - [x] Gate local data reads and action execution on permission decisions; deny by default when passkey approval is unavailable.
 - [x] Demonstrate a helper agent with fewer scopes/actions than its parent in the CLI demo.
-- [ ] Replace the local adapter with a Monad contract adapter after the ABI is agreed.
+- [x] Add a Monad contract adapter for live permission reads and fail closed in contract mode.
 - [x] Connect `readData()` to the web app's encrypted demo vault so denied requests never invoke decryption.
 - [ ] Replace the server-held demo vault key with a user-controlled key-release mechanism.
-- [ ] Add ERC-8004 identity verification and the real passkey approval adapter.
+- [x] Add ERC-8004 identity verification and the real passkey approval adapter.
+- [x] Record exact one-use payment approvals on Monad and execute them through `pay` with the registered agent wallet.
+- [x] Keep released plaintext out of connected-demo logs.
 - [x] Build the first command-line travel-agent permission demo.
 - [x] Demonstrate an explicit over-budget booking denial without executing the action.
 - [x] Add a Kimi planner with schema validation and local fallback.
-- [ ] Move the Kimi call behind the web app's server-side API route when Teammate 2's app exists.
+- [x] Keep the Kimi key and call in the server-side agent process rather than browser code.
 - [ ] Run the Kimi planner with a newly generated, unexposed key stored only in `.env.local`.
-- [ ] Add Envio and show indexed permission/revocation history.
+- [x] Add an Envio HyperIndex project for permission, revocation, approval, and use events.
+- [ ] Run/deploy Envio with a private API token and point the dashboard activity feed at its GraphQL endpoint.
 - [x] Write the SDK and combined web-demo run instructions.
 
 ## Security boundary
 
-The current delegation and revoke-cascade behavior is evaluated by the local SDK against `MemoryPermissionStore`; it is not yet enforced by a Monad contract. The web app encrypts demo values with AES-GCM and calls decryption only through `readData()`, but its key is still server held. Already released plaintext cannot be revoked. Approval creation rechecks the action and permission ID, and the Mera-derived EIP-712 approval is verified server-side; the approved action is not submitted to the contract yet.
+The deployed contract enforces grant, delegation, ancestor revocation, replay protection, spending, and exact one-use payment approval. The web app encrypts demo values with AES-GCM and calls decryption only after a fresh signed agent request and live contract check, but its encryption key is still server held. Already released plaintext cannot be revoked. The local approval queue is transport only; the agent receives approval only after the server verifies the matching Monad transaction and state.
 
 ## Decisions and blockers
 

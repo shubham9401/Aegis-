@@ -27,7 +27,7 @@ const decision = await aegis.checkPermission({
 });
 ```
 
-`MemoryPermissionStore` is for local development. Replace it with the Monad-backed `PermissionStore` adapter once the team has agreed on the contract ABI and deployment address.
+`MemoryPermissionStore` is for local development. The web gateway's contract adapter reads the deployed Monad grant and fails closed instead of falling back to this store.
 
 ## Connect an agent application
 
@@ -43,19 +43,19 @@ const api = new AegisApiClient({
 
 const context = await api.requestContext({
   user: "0x1111111111111111111111111111111111111111",
-  agentId: "erc8004:monad:travel-agent-001",
+  agentId: "2088",
   scope: "profile:dietary-preference",
 });
 
 const pending = await api.requestApproval({
   permissionId: "permission-from-the-current-check",
-  requestId: crypto.randomUUID(),
+  requestId: "0x<32-random-bytes>",
   user: "0x1111111111111111111111111111111111111111",
-  agentId: "erc8004:monad:travel-agent-001",
+  agentId: "2088",
   action: "travel:book",
   amountMinor: "40000",
   currency: "USD",
-  service: "demo-airline",
+  service: "0x2222222222222222222222222222222222222222",
   deadline: Math.floor(Date.now() / 1000) + 300,
 });
 
@@ -65,15 +65,13 @@ if (decided.result.outcome !== "approved") {
 }
 ```
 
-The web app now creates a fresh Mera/WebAuthn signing session for each sensitive approval and verifies the resulting EIP-712 signature on the server. The approval is still off-chain: it does not call the deployed contract's `approvePayment` or `pay` functions yet.
-
-`MemoryPermissionStore` is only for local development. The Monad adapter will implement the same `PermissionStore` interface after the smart-contract ABI is agreed with Teammate 1.
+In contract mode, the user-facing app submits `approvePayment` with the Mera-derived account and the server verifies the resulting transaction and event before returning approval to the agent. The registered ERC-8004 owner then calls `pay`; the SDK never treats the local queue as payment authority.
 
 ## Delegated agents
 
 `createDelegatedPermission(parent, child)` creates a child grant linked to its parent. It rejects scopes, actions, spending limits, services, approval thresholds, or an expiry that would give the child more authority than the parent. The SDK revalidates that relationship and every ancestor's active status on each request, so revoking or expiring a parent blocks its descendants on future checks.
 
-The memory store and this behavior are a local prototype. A production Monad adapter must read the parent link and revocation state from the contract; a child permission should not be trusted just because an SDK caller constructed it.
+The memory-store implementation remains useful for unit tests. The deployed contract independently enforces narrower child grants, bounded depth, ancestor revocation, shared allowance consumption, and current ERC-8004 ownership.
 
 ## Gated data and actions
 
