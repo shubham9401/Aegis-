@@ -8,7 +8,7 @@ The web app reads Next.js environment files under `apps/web`; the connected agen
 
 Required operator values:
 
-- Web `KIMI_API_KEY`: enter privately into the environment file; funded provider account needed. The key stays server-side.
+- Web planner: set `KIMI_API_KEY` privately for live Kimi planning, or set `AEGIS_PLANNER_MODE=local` for an explicitly scripted proposal that needs no API credits. The local mode still exercises the real Monad contract and token payment; it is not an AI-planning claim.
 - Web `AEGIS_MERCHANT_ADDRESS`: public test merchant recipient. The grant permanently fixes that recipient.
 - Agent `AEGIS_AGENT_KEYSTORE_PATH`: encrypted JSON keystore outside Git, owned by the agent's current registry owner.
 - Agent `AEGIS_AGENT_ADDRESS`: the matching public signer address.
@@ -32,7 +32,7 @@ Existing deployment does not need redeployment. Registry ownership cannot be byp
 
 The connected CLI, Policies and Approvals now share `/api/chain/payments`. Contract mode does not use the legacy `/api/approvals` transport; that remains for the labelled local simulation and compatibility. An old legacy queue entry is not migrated into the signed queue or treated as new signed consent. Paying the demo merchant is not a real travel booking.
 
-Kimi is mandatory in the connected path. No provider fallback masquerades as a live response. The exact payment instruction is an operator-entered instruction, not a supplier quote or proof of the full natural-language intent. Approved budget and passport values are checked locally before submission and again after waiting for approval; all granted profile scopes are requested even if Kimi omits them. Without granted/released facts those checks are unavailable. Dietary preferences can be retained as trip requirements, but this transfer has no meal-order or reservation capability. Vault plaintext is not sent back to Kimi; the original user prompt is sent to Kimi.
+The connected request must specify exactly one `Payment: USD <amount> to <merchant address>` instruction. Kimi is the default planner. If `AEGIS_PLANNER_MODE=local` is set explicitly, a scripted parser proposes the trip without an AI API call and is labelled `local demo`; the same contract authorization and testnet payment still apply. No provider failure silently falls back. The exact payment instruction is operator-entered, not a supplier quote or proof of the full natural-language intent. Approved budget and passport values are checked locally before submission and again after waiting for approval; all granted profile scopes are requested even if the planner omits them. Without granted/released facts those checks are unavailable. Dietary preferences can be retained as trip requirements, but this transfer has no meal-order or reservation capability. Vault plaintext is not sent to Kimi; the original user prompt is sent to Kimi only when Kimi mode is selected.
 
 ## Delegation rehearsal
 

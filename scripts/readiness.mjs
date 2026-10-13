@@ -13,7 +13,7 @@ check('Contract mode selected in both configurations', web.NEXT_PUBLIC_ADAPTER =
 console.log('Configuration: inherited environment takes precedence; agent loads root .env.local then apps/web/.env.local. Secret values are never displayed.');
 for (const key of ['AEGIS_CONTRACT_ADDRESS', 'AEGIS_RESOURCE_SCOPE', 'AEGIS_APP_ORIGIN', 'AEGIS_DEMO_AGENT_TOKEN']) check(`${key} matches across app and agent`, Boolean(web[key]) && web[key] === agent[key]);
 check('Server vault encryption key configured', Buffer.from(web.VAULT_SERVER_KEY || '', 'base64').length === 32);
-check('Server Kimi key configured (value not displayed)', Boolean(web.KIMI_API_KEY?.trim()));
+check('Planner configured (Kimi key or explicit local demo mode)', web.AEGIS_PLANNER_MODE === 'local' || Boolean(web.KIMI_API_KEY?.trim()));
 check('Merchant public address configured', /^0x[0-9a-fA-F]{40}$/.test(web.AEGIS_MERCHANT_ADDRESS || ''));
 check('Permission ID configured after grant', /^[1-9]\d*$/.test(agent.AEGIS_PERMISSION_ID || ''));
 const keystore = agent.AEGIS_AGENT_KEYSTORE_PATH;

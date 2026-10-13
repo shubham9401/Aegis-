@@ -42,12 +42,12 @@ export async function runChainAgent() {
     if (journal.record) {
       record = journal.record;
       if (record.amountMinor !== intent.amountMinor || record.recipient.toLowerCase() !== intent.recipient.toLowerCase()) throw new Error("Journal and explicit payment instruction differ.");
-      console.log("Resuming the previously validated Kimi proposal. Private profile values are rechecked.");
+      console.log("Resuming the previously validated planner proposal. Private profile values are rechecked.");
     } else {
-      const { plan } = await api.plan(prompt);
-      console.log("Planner: server Kimi. Authorization remains deterministic.");
+      const { plan, planner } = await api.plan(prompt);
+      console.log(`Planner: ${planner ?? "server (unspecified)"}. Authorization remains deterministic.`);
       if (plan.proposedAction.action !== "travel:book" || plan.proposedAction.currency !== "USD") throw new Error("Connected payment requires travel:book in USD test units");
-      if (plan.proposedAction.service.toLowerCase() !== intent.recipient.toLowerCase() || plan.proposedAction.amountMinor !== intent.amountMinor) throw new Error("Kimi proposal differs from the exact payment instruction. No payment was submitted.");
+      if (plan.proposedAction.service.toLowerCase() !== intent.recipient.toLowerCase() || plan.proposedAction.amountMinor !== intent.amountMinor) throw new Error("Planner proposal differs from the exact payment instruction. No payment was submitted.");
       record = { version: 1, fingerprint, requestId, amountMinor: intent.amountMinor, recipient: intent.recipient, requestedDataScopes: plan.requestedDataScopes };
       journal.save(record);
     }

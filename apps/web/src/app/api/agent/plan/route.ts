@@ -1,10 +1,11 @@
-// Kimi proposes structured actions; only the SDK decides authorization.
+// Kimi or an explicitly scripted local mode proposes actions; only Aegis decides authorization.
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { agentPlanRequestSchema, amountMinorSchema, dataScopeSchema } from "@/lib/validation";
 import { apiError, parseBody } from "@/lib/utils";
 import { requireAgent, requireUser } from "@/lib/server-auth";
 import { CURRENCIES } from "@/lib/profile-fields";
+import { localTravelPlan } from "@/lib/local-travel-plan";
 
 const planSchema = z.object({
   summary: z.string().min(1).max(2000),
@@ -24,6 +25,12 @@ export async function POST(request: NextRequest) {
   if (authorization instanceof Response) return authorization;
   const parsed = await parseBody(request, agentPlanRequestSchema);
   if (parsed instanceof Response) return parsed;
+  if (process.env.AEGIS_PLANNER_MODE === "local") {
+    const proposal = localTravelPlan(parsed.userRequest);
+    if (!proposal) return apiError(400, "MISSING_BOOKING_DETAILS", "Specify one exact test payment: Payment: USD 100.00 to 0x<merchant address>.");
+    const plan = planSchema.parse(proposal);
+    return Response.json({ plan, planner: "local demo" }, { headers: { "Cache-Control": "no-store" } });
+  }
   const apiKey = process.env.KIMI_API_KEY?.trim();
   if (!apiKey) return apiError(503, "PLANNER_UNAVAILABLE", "Configure the server KIMI_API_KEY to generate a travel plan");
 

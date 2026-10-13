@@ -148,7 +148,7 @@ export class AegisApiClient {
     return this.#request("/api/chain/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }, false);
   }
 
-  async plan(userRequest: string): Promise<{ plan: { summary: string; requestedDataScopes: DataScope[]; proposedAction: { action: AgentAction; amountMinor: string; currency: string; service: string } } }> {
+  async plan(userRequest: string): Promise<{ plan: { summary: string; requestedDataScopes: DataScope[]; proposedAction: { action: AgentAction; amountMinor: string; currency: string; service: string } }; planner?: "kimi" | "local demo" }> {
     return this.#request("/api/agent/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userRequest }) }, true);
   }
 

@@ -12,7 +12,7 @@ Aegis limits what an agent can read and which test-token payments it can make. I
 - Delegated requests authenticate the grant's agent signer; parent revocation prevents later child access and payments.
 - Activity includes contract events and sanitized gateway logs. The Envio indexer is configured, but requires a running endpoint to populate its feed.
 
-The implementation is tested with local EVM contracts. Physical passkeys, funded testnet writes, and live Kimi require the operator acceptance steps in [the runbook](docs/LOCAL-RUNBOOK.md). Do not equate a successful build with a completed public demonstration.
+The implementation is tested with local EVM contracts. Physical passkeys and funded testnet writes require the operator acceptance steps in [the runbook](docs/LOCAL-RUNBOOK.md). Live Kimi additionally requires a funded provider key. Do not equate a successful build with a completed public demonstration.
 
 ## Run on this laptop
 
@@ -25,17 +25,17 @@ npm run build
 npm run dev:web
 ```
 
-`setup:local` adds missing entries to ignored `.env.local` files and generates separate random vault/auth secrets. It never overwrites an existing value. Set the server Kimi key privately, the approved merchant address, and the agent keystore path before the connected demonstration. Never put keys in chat, screenshots, commits, or public environment variables.
+`setup:local` adds missing entries to ignored `.env.local` files and generates separate random vault/auth secrets. It never overwrites an existing value. Set the approved merchant address and agent keystore path before the connected demonstration. For planning, either set the server Kimi key privately or set `AEGIS_PLANNER_MODE=local` in `apps/web/.env.local` for a clearly labelled scripted proposal with no API cost. Never put keys in chat, screenshots, commits, or public environment variables.
 
 Open http://localhost:3000, create/sign in with a PRF-capable passkey, save sample facts, mint demo tokens, approve a deposit, deposit, and grant a permission. The passkey account needs test MON for transactions. Copy the mined numeric permission ID to root `.env.local` as `AEGIS_PERMISSION_ID`.
 
 ```sh
-npm run demo:web -- "Plan a trip for USD 650 using service 0xYOUR_APPROVED_MERCHANT_ADDRESS"
+npm run demo:web -- "Plan a trip. Payment: USD 650.00 to 0xYOUR_APPROVED_MERCHANT_ADDRESS"
 ```
 
 The connected demo signs scoped context requests with the registered agent wallet, requests an amount above the permission's automatic cap, and waits for the user in the Approvals dashboard. In contract mode, the passkey account records consent with `approvePayment`, and the agent executes the exact payment through the Aegis vault. Plaintext context values are deliberately omitted from terminal logs.
 
-The connected agent uses the web server's Kimi route. It fails clearly if Kimi is unavailable. The separate `npm run demo` command is a labelled local policy simulation and may use its local planner fallback.
+The connected agent uses the web server's Kimi route by default and fails clearly if Kimi is unavailable. With `AEGIS_PLANNER_MODE=local`, it uses a scripted parser that requires one exact `Payment: USD <amount> to <merchant wallet>` instruction; contract checks and testnet transfers are still real. The separate `npm run demo` command is a local policy simulation and does not transact on Monad.
 
 ## Verify
 
