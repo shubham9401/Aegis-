@@ -31,7 +31,8 @@
 - [x] Keep the Kimi key and call in the server-side agent process rather than browser code.
 - [ ] Run the Kimi planner with a newly generated, unexposed key stored only in `.env.local`.
 - [x] Add an Envio HyperIndex project for permission, revocation, approval, and use events.
-- [ ] Run/deploy Envio with a private API token and point the dashboard activity feed at its GraphQL endpoint.
+- [x] Merge Envio's GraphQL history into the dashboard activity feed when `ENVIO_GRAPHQL_URL` is configured.
+- [ ] Run/deploy Envio with a private API token and configure its hosted GraphQL endpoint.
 - [x] Write the SDK and combined web-demo run instructions.
 
 ## Security boundary

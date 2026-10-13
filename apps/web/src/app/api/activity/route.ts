@@ -7,6 +7,7 @@ import { activityQuerySchema } from "@/lib/validation";
 import { apiError } from "@/lib/utils";
 import type { Address } from "@aegis/sdk";
 import { requireUser } from "@/lib/server-auth";
+import { getEnvioActivity } from "@/lib/envio-activity";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,12 +25,18 @@ export async function GET(request: NextRequest) {
   const { user, limit } = result.data;
   const authorization = await requireUser(request, user);
   if (authorization instanceof Response) return authorization;
-  const activity = getActivity(user as Address, limit);
+  const local = getActivity(user as Address, limit);
+  let indexed: typeof local = [];
+  let indexerAvailable = false;
+  try {
+    indexed = await getEnvioActivity(user as Address, limit);
+    indexerAvailable = Boolean(process.env.ENVIO_GRAPHQL_URL?.trim());
+  } catch { /* The display index may lag or be offline; local denials remain available. */ }
+  const activity = [...indexed, ...local]
+    .filter((entry, index, entries) => entries.findIndex((candidate) => candidate.id === entry.id) === index)
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, limit);
 
-  // TODO: merge with Envio events when T3 delivers the GraphQL endpoint
-  // const envioUrl = process.env.NEXT_PUBLIC_ENVIO_URL;
-  // if (envioUrl) { ... }
-
-  return Response.json({ activity }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ activity, indexerAvailable }, { headers: { "Cache-Control": "no-store" } });
   } catch { return apiError(503, "ACTIVITY_UNAVAILABLE", "Activity storage is unavailable"); }
 }
