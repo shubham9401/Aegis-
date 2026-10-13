@@ -42,6 +42,12 @@ test('authenticated API flow: grant, gated vault, valid consent, over-limit deny
     assert.equal(session.status, 200);
     const cookie = session.headers.get('set-cookie').match(/aegis_owner=[^;,]+/)[0];
     const ownerHeaders = { cookie };
+    assert.equal((await permissions.POST(request('/api/permissions', 'POST', {
+      agentId: 'unconfigured-agent', dataScopes: ['profile:dietary-preference'], actionRules: [], expiresInSeconds: 60,
+    }, ownerHeaders))).status, 400);
+    assert.equal((await vault.PUT(request('/api/vault', 'PUT', {
+      entries: [{ scope: 'profile:passport-validity', value: 'valid forever' }],
+    }, ownerHeaders))).status, 400);
     const grantResponse = await permissions.POST(request('/api/permissions', 'POST', {
       agentId: process.env.AEGIS_AGENT_ID, dataScopes: ['profile:dietary-preference'],
       actionRules: [{ action: 'travel:book', maxAmountMinor: '50000', currency: 'USD',
@@ -50,13 +56,13 @@ test('authenticated API flow: grant, gated vault, valid consent, over-limit deny
     assert.equal(grantResponse.status, 201);
     const grant = await grantResponse.json();
     assert.equal((await vault.PUT(request('/api/vault', 'PUT', {
-      entries: [{ scope: 'profile:dietary-preference', value: 'private test fact' }],
+      entries: [{ scope: 'profile:dietary-preference', value: 'vegetarian' }],
     }, ownerHeaders))).status, 200);
     const query = `?user=${account.address}&agentId=${process.env.AEGIS_AGENT_ID}`;
     const allowed = await context.GET(request(`/api/context/profile:dietary-preference${query}`, 'GET', undefined, agentHeaders),
       { params: Promise.resolve({ scope: 'profile:dietary-preference' }) });
     assert.equal(allowed.status, 200);
-    assert.equal((await allowed.json()).value, 'private test fact');
+    assert.equal((await allowed.json()).value, 'vegetarian');
     const denied = await context.GET(request(`/api/context/profile:passport-validity${query}`, 'GET', undefined, agentHeaders),
       { params: Promise.resolve({ scope: 'profile:passport-validity' }) });
     assert.equal((await denied.json()).error, 'DATA_SCOPE_NOT_GRANTED');

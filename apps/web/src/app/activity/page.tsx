@@ -33,7 +33,7 @@ const typeConfig: Record<string, { icon: IconName; label: string; css: string }>
   approval_rejected: { icon: "lock", label: "Rejected", css: "denied" },
 };
 
-export default function ActivityPage() {
+function ActivityPageContent() {
   const { isConnected, address, authenticatedFetch } = useAuth();
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -172,4 +172,9 @@ export default function ActivityPage() {
       </div>
     </div>
   );
+}
+
+export default function ActivityPage() {
+  const { address } = useAuth();
+  return <ActivityPageContent key={address ?? "signed-out"} />;
 }

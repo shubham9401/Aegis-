@@ -84,7 +84,7 @@ test('integer amount schema rejects uint256 overflow; omitted activity limit use
 test('permission grants reject empty rights, ambiguous duplicate rules and impossible thresholds', () => {
   const grant = { agentId: 'agent', dataScopes: [], actionRules: [], expiresInSeconds: 60 };
   assert.equal(grantPermissionSchema.safeParse(grant).success, false);
-  const rule = { action: 'travel:book', maxAmountMinor: '100', requireApprovalAboveMinor: '50' };
+  const rule = { action: 'travel:book', maxAmountMinor: '100', requireApprovalAboveMinor: '50', currency: 'USD', allowedServices: ['airline'] };
   assert.equal(grantPermissionSchema.safeParse({ ...grant, actionRules: [rule, rule] }).success, false);
   assert.equal(grantPermissionSchema.safeParse({ ...grant, actionRules: [{ ...rule, requireApprovalAboveMinor: '101' }] }).success, false);
   assert.equal(grantPermissionSchema.safeParse({ ...grant, actionRules: [rule] }).success, true);

@@ -3,6 +3,7 @@
 /* ─── Aegis Design System ─── */
 
 :root {
+  color-scheme: dark;
   /* Core palette */
   --aegis-primary: #79d8e5;
   --aegis-primary-light: #a3e5ed;
@@ -24,7 +25,7 @@
   --border-active: rgba(121, 216, 229, 0.58);
   --text-primary: #f6f7fb;
   --text-secondary: #aeb6ca;
-  --text-muted: #737d94;
+  --text-muted: #8f9aae;
   --text-faint: #4f586d;
 
   /* Semantic aliases used by product surfaces */
@@ -1451,4 +1452,106 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .btn:hover,
   .btn:active:not(:disabled),
   .capability-card:hover { transform: none; }
+}
+
+/* Shared interaction refinements */
+.account-address-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.account-address-row strong { min-width: 0; font-size: 1rem; }
+.copy-address { display: inline-flex; align-items: center; gap: 6px; }
+.copy-address .btn { min-height: 32px; padding: 7px; }
+.copy-address small { font-size: 10px; color: var(--text-muted); }
+.nav-account .copy-address small { position: absolute; top: 58px; right: 20px; background: var(--bg-card); padding: 4px; }
+.refinement-form { padding: 28px; max-width: 760px; }
+.refinement-form fieldset { border: 0; min-width: 0; }
+.field-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 24px 0 8px; }
+.field-heading:first-child { margin-top: 0; }
+.field-heading .label { margin: 0; }
+.field-help { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin: 7px 0 16px; }
+.budget-inputs { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; }
+.expiry-feedback { color: var(--aegis-primary-light); font-size: 13px; margin-top: 10px; }
+.save-feedback { color: var(--aegis-success); margin-top: 16px; font-size: 13px; }
+.refinement-form .alert-error { margin-top: 16px; }
+.account-dashboard { margin: 0 0 60px; }
+.dashboard-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.dashboard-heading h2 { font-size: 26px; font-weight: 600; }
+.dashboard-heading h3 { font-size: 15px; font-weight: 600; }
+.dashboard-heading p { font-size: 12px; color: var(--text-muted); margin-top: 7px; }
+.dashboard-heading a { color: var(--aegis-primary-light); font-size: 12px; }
+.dashboard-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 24px; }
+.dashboard-metrics a { display: grid; gap: 12px; padding: 22px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card); color: var(--text-secondary); text-decoration: none; }
+.dashboard-metrics a:hover { border-color: var(--border-active); }
+.dashboard-metrics a:focus-visible { outline: 2px solid var(--aegis-primary); outline-offset: 4px; }
+.dashboard-metrics svg { color: var(--aegis-primary-light); }
+.dashboard-metrics strong { font-size: 30px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.dashboard-metrics span { font-size: 12px; }
+.dashboard-panel { padding: 22px; }
+.dashboard-list { list-style: none; }
+.dashboard-list li { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); overflow-wrap: anywhere; }
+.dashboard-list li:last-child { border: 0; }
+.dashboard-list strong, .dashboard-list span, .dashboard-list time { display: block; }
+.dashboard-list strong { font-size: 13px; font-weight: 600; color: var(--text-primary); text-transform: capitalize; }
+.dashboard-list span { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-top: 7px; }
+.dashboard-list time { font-size: 11px; color: var(--text-muted); margin-top: 7px; }
+@media (max-width: 680px) {
+  .dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .refinement-form { padding: 20px; }
+  .copy-address small { max-width: 100px; }
+}
+.account-home .home-hero { min-height: 0; padding-block: 30px 42px; }
+.account-home .hero-copy h1 { font-size: clamp(32px, 4vw, 48px); }
+.account-home .hero-lead { font-size: 15px; }
+.approval-dialog { position: fixed; inset: 0; margin: auto; border: 0; padding: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); background: transparent; color: var(--text-primary); overflow: auto; }
+.approval-dialog::backdrop { background: rgba(0, 0, 0, .7); backdrop-filter: blur(4px); }
+.approval-dialog .modal-content { width: 100%; max-height: none; }
+
+/* Vault editor: a single aligned form, with field-local controls and status. */
+.vault-page { max-width: 1120px; }
+.vault-page-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 30px; }
+.vault-eyebrow { display: block; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .1em; color: var(--aegis-primary-light); margin-bottom: 12px; }
+.vault-page-heading .page-title { font-size: clamp(30px, 4vw, 40px); margin-bottom: 12px; }
+.vault-page-heading p { color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+.vault-security-chip { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; border: 1px solid var(--border-color); border-radius: 8px; padding: 9px 12px; font-size: 11px; color: var(--aegis-primary-light); background: var(--bg-secondary); }
+.vault-editor { overflow: hidden; }
+.vault-editor fieldset { min-width: 0; border: 0; }
+.vault-field-row { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 42px; padding: 30px 32px; border-bottom: 1px solid var(--border-color); }
+.vault-field-description { position: relative; padding-left: 43px; }
+.vault-section-icon { position: absolute; left: 0; top: 0; width: 30px; height: 30px; display: grid; place-items: center; color: var(--aegis-primary-light); }
+.vault-field-description h2 { font-size: 15px; font-weight: 650; margin-bottom: 9px; }
+.vault-field-description p { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.vault-field-description .badge { margin-top: 12px; font-size: 10px; }
+.vault-choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.vault-choice { display: flex; align-items: center; gap: 8px; padding: 11px 10px; font-size: 12px; text-align: left; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 7px; cursor: pointer; }
+.vault-choice:hover { border-color: var(--border-active); color: var(--text-primary); }
+.vault-choice.selected { border-color: var(--aegis-primary); background: rgba(121, 216, 229, .09); color: var(--aegis-primary-light); }
+.vault-choice-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
+.vault-choice.selected .vault-choice-dot { background: var(--aegis-primary); }
+.vault-choice svg { margin-left: auto; flex-shrink: 0; }
+.vault-choice:focus-visible { outline: 2px solid var(--aegis-primary); outline-offset: 3px; }
+.vault-field-note { color: var(--text-muted); font-size: 11px; line-height: 1.65; margin-top: 11px; }
+.vault-budget-group { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; max-width: 390px; }
+.vault-budget-group input { font-size: 18px; font-variant-numeric: tabular-nums; }
+.vault-date-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.vault-date-group input { flex: 1; min-width: 170px; max-width: 260px; color-scheme: dark; }
+.vault-calendar-button { color: var(--aegis-primary-light); white-space: nowrap; }
+.vault-expiry-status { display: inline-flex; gap: 7px; align-items: center; margin-top: 13px; font-size: 12px; color: var(--aegis-accent-light); }
+.vault-expiry-status.expired { color: var(--aegis-danger-light); }
+.vault-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 22px; background: var(--bg-secondary); padding: 22px 32px; }
+.vault-save-bar strong { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.vault-save-bar p { margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+.vault-save-bar .btn { min-width: 170px; }
+.vault-message { margin: 20px 32px; }
+.vault-trust-note { display: flex; align-items: start; justify-content: center; gap: 8px; font-size: 11px; color: var(--text-muted); line-height: 1.7; margin-top: 18px; }
+.vault-trust-note svg { margin-top: 2px; flex-shrink: 0; }
+@media (max-width: 900px) {
+  .vault-field-row { grid-template-columns: 200px minmax(0, 1fr); gap: 20px; padding: 25px; }
+  .vault-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .vault-page-heading { align-items: start; flex-direction: column; gap: 14px; }
+  .vault-field-row { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 23px 20px; }
+  .vault-field-description { padding-left: 38px; }
+  .vault-save-bar { align-items: stretch; flex-direction: column; padding: 20px; }
+  .vault-date-group input { max-width: none; }
+  .vault-date-group .btn { flex: 1; }
+  .vault-trust-note { justify-content: start; }
 }

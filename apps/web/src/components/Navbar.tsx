@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Icon, type IconName } from "@/components/Icon";
+import CopyAddress from "@/components/CopyAddress";
 
 const navLinks: Array<{ href: string; label: string; icon: IconName }> = [
   { href: "/", label: "Overview", icon: "shield" },
@@ -47,9 +48,10 @@ export default function Navbar() {
             {isConnected && address ? (
               <>
                 <span className="connection-dot" aria-label="Connected" />
-                <span className="address-chip">
+                <span className="address-chip" title={address}>
                   {address.slice(0, 6)}…{address.slice(-4)}
                 </span>
+                <CopyAddress address={address} />
                 <button className="nav-signout" onClick={disconnect} disabled={isLoading} aria-label="Disconnect account" title="Disconnect account">
                   <Icon name="logout" size={16} /><span>Disconnect</span>
                 </button>

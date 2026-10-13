@@ -1,5 +1,6 @@
 // Zod validation schemas for all API routes
 import { z } from "zod";
+import { CURRENCIES, validProfileValue } from "./profile-fields";
 
 // ─── Shared ───
 
@@ -17,7 +18,7 @@ export const agentActionSchema = z.enum(["travel:search", "travel:book"]);
 export const amountMinorSchema = z.string().regex(/^(0|[1-9]\d{0,77})$/)
   .refine((value) => /^\d+$/.test(value) && BigInt(value) < BigInt(2) ** BigInt(256), "Amount exceeds uint256");
 const identifierSchema = z.string().trim().min(1).max(256);
-const currencySchema = z.string().regex(/^[A-Z]{3}$/, "Use a three-letter currency code");
+const currencySchema = z.enum(CURRENCIES);
 
 // ─── Permission Grant ───
 
@@ -43,6 +44,12 @@ export const grantPermissionSchema = z.object({
     context.addIssue({ code: z.ZodIssueCode.custom, message: "Duplicate scopes or action rules" });
   }
   for (const rule of permission.actionRules) {
+    if (rule.action === "travel:book" && (!rule.currency || !rule.maxAmountMinor || rule.maxAmountMinor === "0" || !rule.allowedServices?.length)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Booking requires a positive limit, supported currency, and at least one allowed service" });
+    }
+    if (rule.allowedServices && (new Set(rule.allowedServices).size !== rule.allowedServices.length || rule.allowedServices.some(service => !/^[a-zA-Z0-9][a-zA-Z0-9:._/-]{0,255}$/.test(service)))) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Services must be unique identifiers without whitespace or special characters" });
+    }
     if (rule.maxAmountMinor && rule.requireApprovalAboveMinor && /^\d+$/.test(rule.maxAmountMinor) && /^\d+$/.test(rule.requireApprovalAboveMinor) &&
         BigInt(rule.requireApprovalAboveMinor) > BigInt(rule.maxAmountMinor)) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "Approval threshold exceeds the spending limit" });
@@ -55,7 +62,7 @@ export const grantPermissionSchema = z.object({
 export const vaultWriteSchema = z.object({
   scope: dataScopeSchema,
   value: z.string().min(1).max(1000),
-});
+}).refine(entry => validProfileValue(entry.scope, entry.value), "Use a dietary choice, a positive budget such as USD 500.00, or a passport expiry date in YYYY-MM-DD format");
 
 export const vaultBatchWriteSchema = z.object({
   entries: z.array(vaultWriteSchema).min(1).max(3)

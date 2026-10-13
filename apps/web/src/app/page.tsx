@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/Icon";
 import { useAuth } from "@/contexts/AuthContext";
+import CopyAddress from "@/components/CopyAddress";
+import AccountDashboard from "@/components/AccountDashboard";
 
 const capabilities: Array<{
   icon: IconName;
@@ -40,13 +42,13 @@ export default function HomePage() {
   const { isConnected, address, balance, isLoading, error, connect, createPasskey, hasPasskey, disconnect, refreshBalance } = useAuth();
 
   return (
-    <div className="page-container home-page">
+    <div className={`page-container home-page ${isConnected ? "account-home" : ""}`}>
       <section className="home-hero">
         <div className="hero-copy">
           <div className="eyebrow"><span className="eyebrow-dot" />Trust infrastructure for autonomous agents</div>
-          <h1>Choose what agents access.<br /><span>Approve sensitive actions.</span></h1>
+          <h1>{isConnected ? "Account overview" : <>Choose what agents access.<br /><span>Approve sensitive actions.</span></>}</h1>
           <p className="hero-lead">
-            Aegis checks agent requests at integration points against your permissions for context access, actions, limits, and expiry.
+            {isConnected ? "Manage your policies, encrypted context, and approval queue from one account." : "Aegis checks agent requests at integration points against your permissions for context access, actions, limits, and expiry."}
           </p>
           <div className="hero-actions">
             {isConnected ? (
@@ -87,10 +89,11 @@ export default function HomePage() {
             <div className="session-content">
               <div className="session-metric">
                 <span>Account</span>
-                <strong className="mono">{address.slice(0, 10)}…{address.slice(-8)}</strong>
+                <div className="account-address-row"><strong className="mono" title={address}>{address.slice(0, 10)}…{address.slice(-8)}</strong><CopyAddress address={address} /></div>
               </div>
               <div className="session-metric balance-metric">
                 <span>Monad testnet balance</span>
+                <small className="field-help">Refreshes every 30 seconds while this tab is visible.</small>
                 <div>
                   <strong>{balance ?? "—"}</strong><small> MON</small>
                 </div>
@@ -132,7 +135,8 @@ export default function HomePage() {
         </aside>
       </section>
 
-      <section className="decision-flow" aria-label="Aegis enforcement flow">
+      {isConnected && address ? <AccountDashboard key={address} address={address} /> : null}
+      {!isConnected ? <section className="decision-flow" aria-label="Aegis enforcement flow">
         <div className="flow-intro">
           <span className="section-label">Request lifecycle</span>
           <strong>One decision boundary.<br />Every agent request.</strong>
@@ -140,9 +144,9 @@ export default function HomePage() {
         <div className="flow-step"><span>01</span><Icon name="network" /><div><small>Identify</small><strong>Authenticate the caller</strong></div></div>
         <div className="flow-step"><span>02</span><Icon name="sliders" /><div><small>Evaluate</small><strong>Check live policy</strong></div></div>
         <div className="flow-step"><span>03</span><Icon name="check" /><div><small>Enforce</small><strong>Release or block</strong></div></div>
-      </section>
+      </section> : null}
 
-      <section className="capability-section">
+      {!isConnected ? <section className="capability-section">
         <div className="section-heading">
           <div>
             <span className="section-label">Built for enforceable trust</span>
@@ -160,7 +164,7 @@ export default function HomePage() {
             </article>
           ))}
         </div>
-      </section>
+      </section> : null}
     </div>
   );
 }

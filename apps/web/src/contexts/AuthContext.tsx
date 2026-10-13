@@ -63,14 +63,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [authenticatedFetch]);
   const refreshBalance = useCallback(async () => {
     const address = state.address; if (!address) return;
+    const current = generation.current;
     try {
-      const client = createPublicClient({ chain: monadTestnet, transport: http(process.env.NEXT_PUBLIC_RPC_URL || undefined) });
+      const client = createPublicClient({ chain: monadTestnet, transport: http(process.env.NEXT_PUBLIC_RPC_URL || undefined, { timeout: 10_000, retryCount: 1 }) });
       const balance = formatEther(await client.getBalance({ address }));
-      setState((s) => s.address === address ? { ...s, balance } : s);
-    } catch { setState((s) => s.address === address ? { ...s, balance: "—" } : s); }
+      setState((s) => s.address === address && current === generation.current ? { ...s, balance } : s);
+    } catch { setState((s) => s.address === address && current === generation.current ? { ...s, balance: "—" } : s); }
   }, [state.address]);
   useEffect(() => {
-    if (state.address) { const timer = window.setTimeout(() => void refreshBalance(), 0); return () => window.clearTimeout(timer); }
+    if (!state.address) return;
+    let stopped = false;
+    let timer: number;
+    const poll = async () => {
+      if (document.visibilityState === "visible") await refreshBalance();
+      if (!stopped) timer = window.setTimeout(poll, 30_000);
+    };
+    timer = window.setTimeout(poll, 0);
+    const focus = () => { if (document.visibilityState === "visible") void refreshBalance(); };
+    document.addEventListener("visibilitychange", focus);
+    return () => { stopped = true; window.clearTimeout(timer); document.removeEventListener("visibilitychange", focus); };
   }, [state.address, refreshBalance]);
   const login = useCallback(async (create: boolean) => {
     if (busy.current) return; busy.current = true;

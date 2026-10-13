@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import ApprovalDialog from "@/components/ApprovalDialog";
 import { formatCurrency, formatExpiry, timeRemaining } from "@/lib/utils";
 import { ConnectionGate } from "@/components/ConnectionGate";
 import { Icon } from "@/components/Icon";
@@ -23,7 +24,7 @@ interface StoredApproval {
   };
 }
 
-export default function ApprovalsPage() {
+function ApprovalsPageContent() {
   const { isConnected, address, signApproval, authenticatedFetch, approveContractPayment, fundContractVault } = useAuth();
   const [approvals, setApprovals] = useState<StoredApproval[]>([]);
   const [loading, setLoading] = useState(false);
@@ -289,8 +290,8 @@ export default function ApprovalsPage() {
 
       {/* Approval Modal */}
       {selectedApproval && (
-        <div className="modal-overlay" onClick={() => { if (!processing) setSelectedApproval(null); }}>
-          <div className="modal-content" role="dialog" aria-modal="true" aria-label="Action approval" onClick={(e) => e.stopPropagation()}>
+        <ApprovalDialog busy={processing !== null} onClose={() => setSelectedApproval(null)}>
+          <div className="modal-content">
             <h3 className="panel-title"><Icon name="key" size={18} /> Action approval</h3>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>
               {adapter === "contract"
@@ -392,8 +393,13 @@ export default function ApprovalsPage() {
                 : "Only structured values are shown above. The approval is signed with EIP-712 typed data."}
             </p>
           </div>
-        </div>
+        </ApprovalDialog>
       )}
     </div>
   );
+}
+
+export default function ApprovalsPage() {
+  const { address } = useAuth();
+  return <ApprovalsPageContent key={address ?? "signed-out"} />;
 }

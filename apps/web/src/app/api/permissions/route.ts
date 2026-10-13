@@ -17,6 +17,10 @@ async function grant(request: NextRequest) {
   const parsed = await parseBody(request, grantPermissionSchema);
   if (parsed instanceof Response) return parsed;
 
+  const configuredAgent = process.env.AEGIS_AGENT_ID?.trim();
+  if (!configuredAgent) return apiError(503, "AGENT_UNCONFIGURED", "Configure the supported agent before granting permissions");
+  if (parsed.agentId !== configuredAgent) return apiError(400, "UNKNOWN_AGENT", "Select the configured agent; arbitrary agent labels cannot authenticate");
+
   const now = Math.floor(Date.now() / 1000);
   const permissionId = `perm-${crypto.randomUUID()}`;
 
@@ -78,6 +82,7 @@ async function list(request: NextRequest) {
   return Response.json({
     permissions: serialized,
     adapter,
+    configuredAgentId: process.env.AEGIS_AGENT_ID?.trim() || null,
     contract: adapter === "contract" ? getServerContractConfig() : undefined,
   });
 }

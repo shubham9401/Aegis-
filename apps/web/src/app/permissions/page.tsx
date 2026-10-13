@@ -8,6 +8,8 @@ import { Icon } from "@/components/Icon";
 import { actionsForGrant, minorToTokenUnits, type ContractConfig } from "@/lib/aegis-contract";
 import { getAddress, isAddress, zeroAddress } from "viem";
 import type { DataScope } from "@aegis/sdk";
+import { CURRENCIES } from "@/lib/profile-fields";
+import { grantPermissionSchema, amountMinorSchema } from "@/lib/validation";
 
 const AVAILABLE_SCOPES = [
   "profile:dietary-preference",
@@ -37,7 +39,7 @@ interface SerializedPermission {
   paymentRecipient?: string;
 }
 
-export default function PermissionsPage() {
+function PermissionsPageContent() {
   const { isConnected, address, authenticatedFetch, grantContractPermission, revokeContractPermission } = useAuth();
   const [permissions, setPermissions] = useState<SerializedPermission[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,6 +49,7 @@ export default function PermissionsPage() {
 
   // Form state
   const [agentId, setAgentId] = useState("");
+  const [configuredAgentId, setConfiguredAgentId] = useState<string | null>(null);
   const [selectedScopes, setSelectedScopes] = useState<string[]>(["profile:dietary-preference", "profile:travel-budget"]);
   const [action, setAction] = useState<string>("travel:book");
   const [maxAmount, setMaxAmount] = useState("500.00");
@@ -67,6 +70,8 @@ export default function PermissionsPage() {
       if (!res.ok) throw new Error(`${data.error}: ${data.detail ?? "Unable to load permissions"}`);
       setPermissions(data.permissions ?? []);
       setAdapter(data.adapter ?? "demo");
+      setConfiguredAgentId(data.configuredAgentId ?? null);
+      if (data.adapter !== "contract") setAgentId(data.configuredAgentId ?? "");
       setContractConfig(data.contract ?? null);
     } catch (error) {
       setMessage(`❌ ${error instanceof Error ? error.message : "Unable to load permissions"}`);
@@ -98,17 +103,21 @@ export default function PermissionsPage() {
     setMessage(null);
 
     try {
-      const maxAmountMinor = decimalToMinorUnits(maxAmount);
-      const requireApprovalAboveMinor = decimalToMinorUnits(approvalThreshold);
+      const maxAmountMinor = action === "travel:book" ? decimalToMinorUnits(maxAmount) : "0";
+      const requireApprovalAboveMinor = action === "travel:book" ? decimalToMinorUnits(approvalThreshold) : "0";
+      amountMinorSchema.parse(maxAmountMinor);
+      amountMinorSchema.parse(requireApprovalAboveMinor);
       if (adapter === "demo" && BigInt(requireApprovalAboveMinor) > BigInt(maxAmountMinor)) throw new Error("Approval threshold cannot exceed the spending limit.");
       const hours = Number(expiryHours);
       if (!Number.isFinite(hours) || hours <= 0 || hours > 168 || !Number.isInteger(hours * 3600)) throw new Error("Expiry must be greater than zero and at most 168 hours.");
       if (adapter === "contract") {
         if (!contractConfig) throw new Error("Monad contract configuration is unavailable.");
         if (!/^(0|[1-9]\d*)$/.test(agentId)) throw new Error("Agent ID must be the numeric ERC-8004 token ID, for example 2088.");
+        amountMinorSchema.parse(agentId);
         const isPayment = action === "travel:book";
         const recipient = allowedServices.trim();
-        if (isPayment && !isAddress(recipient)) throw new Error("Enter the allowed service's Monad payment address.");
+        if (isPayment && (!isAddress(recipient) || recipient.toLowerCase() === zeroAddress)) throw new Error("Enter a valid, nonzero Monad payment address.");
+        if (isPayment && BigInt(maxAmountMinor) === 0n) throw new Error("Set a positive spending limit.");
         const result = await grantContractPermission({
           contractAddress: contractConfig.address,
           resourceScope: contractConfig.resourceScope,
@@ -123,25 +132,20 @@ export default function PermissionsPage() {
         await loadPermissions();
         return;
       }
+      const payload = {
+        agentId, dataScopes: selectedScopes,
+        actionRules: [{ action, maxAmountMinor, currency, allowedServices: allowedServices.split(",").map(s => s.trim()).filter(Boolean), requireApprovalAboveMinor }],
+        expiresInSeconds: hours * 3600,
+      };
+      if (agentId !== configuredAgentId) throw new Error("Choose the configured agent.");
+      const validated = grantPermissionSchema.safeParse(payload);
+      if (!validated.success) throw new Error(validated.error.issues.map(issue => issue.message).join(". "));
       const res = await authenticatedFetch("/api/permissions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          agentId,
-          dataScopes: selectedScopes,
-          actionRules: [
-            {
-              action,
-              maxAmountMinor,
-              currency,
-              allowedServices: allowedServices.split(",").map((s) => s.trim()).filter(Boolean),
-              requireApprovalAboveMinor,
-            },
-          ],
-          expiresInSeconds: hours * 3600,
-        }),
+        body: JSON.stringify(validated.data),
       });
 
       if (res.ok) {
@@ -234,13 +238,14 @@ export default function PermissionsPage() {
 
       <div className="workspace-grid">
         {/* Grant Form */}
-        <div className="glass-card" style={{ padding: 24 }}>
+        <form className="glass-card" style={{ padding: 24 }} onSubmit={event => { event.preventDefault(); if (!granting) void handleGrant(); }}>
           <h3 className="panel-title"><Icon name="shield" size={17} /> Grant permission</h3>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <label className="label">Agent ID</label>
-              <input className="input" value={agentId} onChange={(e) => setAgentId(e.target.value)} placeholder={adapter === "contract" ? "2088" : "erc8004:monad:agent-id"} />
+              <label className="label" htmlFor="policy-agent">Agent</label>
+              {adapter === "contract" ? <input id="policy-agent" className="input" inputMode="numeric" pattern="[0-9]+" required value={agentId} onChange={e => setAgentId(e.target.value)} placeholder="ERC-8004 token ID, e.g. 2088" /> : <select id="policy-agent" className="select" required value={agentId} onChange={e => setAgentId(e.target.value)}><option value="">{configuredAgentId ? "Choose an agent" : "No agent configured"}</option>{configuredAgentId ? <option value={configuredAgentId}>{configuredAgentId}</option> : null}</select>}
+              <p className="field-help">{adapter === "contract" ? "The contract resolves the registered ERC-8004 owner when you grant." : "Only the agent configured for this gateway can use local permissions."}</p>
             </div>
 
             <div>
@@ -255,29 +260,29 @@ export default function PermissionsPage() {
                     aria-pressed={selectedScopes.includes(scope)}
                   >
                     <span className="check-box">{selectedScopes.includes(scope) ? <Icon name="check" size={12} /> : null}</span>
-                    {scope.split(":")[1]}
+                    {scope === "profile:dietary-preference" ? "Dietary preference" : scope === "profile:travel-budget" ? "Travel budget" : "Passport expiry"}
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="label">Action</label>
-              <select className="select" value={action} onChange={(e) => setAction(e.target.value)}>
+              <label className="label" htmlFor="policy-action">Action</label>
+              <select id="policy-action" className="select" value={action} onChange={(e) => setAction(e.target.value)}>
                 {AVAILABLE_ACTIONS.map((a) => (
-                  <option key={a} value={a}>{a}</option>
+                  <option key={a} value={a}>{a === "travel:book" ? "Book travel" : "Search travel"}</option>
                 ))}
               </select>
             </div>
 
             <div className="form-grid-2">
               <div>
-              <label className="label">Max Amount (two decimal units)</label>
-                <input className="input" type="number" step="0.01" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} />
+              <label className="label" htmlFor="policy-limit">Spending limit</label>
+                <input id="policy-limit" className="input" type="number" min={action === "travel:book" ? "0.01" : "0"} required step="0.01" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} />
               </div>
               {adapter === "demo" ? <div>
-                  <label className="label">Approval Above (two decimal units)</label>
-                  <input className="input" type="number" step="0.01" value={approvalThreshold} onChange={(e) => setApprovalThreshold(e.target.value)} />
+                  <label className="label" htmlFor="policy-threshold">Require approval above</label>
+                  <input id="policy-threshold" className="input" type="number" min="0" max={maxAmount || undefined} required step="0.01" value={approvalThreshold} onChange={(e) => setApprovalThreshold(e.target.value)} />
                 </div> : <div>
                   <label className="label">Over-limit payments</label>
                   <div className="input" style={{ display: "flex", alignItems: "center", color: "var(--text-secondary)" }}>Require an explicit passkey approval</div>
@@ -286,18 +291,19 @@ export default function PermissionsPage() {
 
             <div className="form-grid-2">
               <div>
-                <label className="label">Currency</label>
-                <input className="input" value={currency} onChange={(e) => setCurrency(e.target.value)} />
+                <label className="label" htmlFor="policy-currency">Currency</label>
+                <select id="policy-currency" className="select" aria-label="Policy currency" value={adapter === "contract" ? "USD" : currency} onChange={e => setCurrency(e.target.value)}>{(adapter === "contract" ? ["USD"] : CURRENCIES).map(code => <option key={code}>{code}</option>)}</select>
+                {adapter === "contract" ? <p className="field-help">Limits use the contract&apos;s test aUSD token.</p> : null}
               </div>
               <div>
-                <label className="label">Expiry (hours)</label>
-                <input className="input" type="number" value={expiryHours} onChange={(e) => setExpiryHours(e.target.value)} />
+                <label className="label" htmlFor="policy-expiry">Expiry (hours, up to 7 days)</label>
+                <input id="policy-expiry" className="input" aria-label="Expiry in hours" type="number" min="0.0002777778" max="168" step="any" required value={expiryHours} onChange={(e) => setExpiryHours(e.target.value)} />
               </div>
             </div>
 
             <div>
-              <label className="label">{adapter === "contract" ? "Allowed service payment address" : "Allowed Services (comma-separated)"}</label>
-              <input className="input" value={allowedServices} onChange={(e) => setAllowedServices(e.target.value)} placeholder={adapter === "contract" ? "0x…" : "Service identifier agreed with the agent"} disabled={adapter === "contract" && action !== "travel:book"} />
+              <label className="label" htmlFor="policy-services">{adapter === "contract" ? "Allowed service payment address" : "Allowed services (comma-separated)"}</label>
+              <input id="policy-services" className="input" required={action === "travel:book"} maxLength={1024} value={allowedServices} onChange={(e) => setAllowedServices(e.target.value)} placeholder={adapter === "contract" ? "0x…" : "Service identifier agreed with the agent"} disabled={adapter === "contract" && action !== "travel:book"} />
             </div>
 
             {adapter === "contract" && <button
@@ -310,16 +316,16 @@ export default function PermissionsPage() {
               Allow limited agent-to-agent delegation
             </button>}
 
-            <button className="btn btn-primary" onClick={handleGrant} disabled={granting || selectedScopes.length === 0 || !agentId.trim() || (action === "travel:book" && !allowedServices.trim())}>
-              {granting ? <span className="animate-pulse">Waiting for Monad…</span> : <><Icon name="shield" size={16} /> {adapter === "contract" ? "Sign & Grant on Monad" : "Grant Permission"}</>}
+            <button type="submit" className="btn btn-primary" disabled={granting || loading || !agentId.trim() || (adapter === "contract" && !contractConfig) || (action === "travel:book" && !allowedServices.trim())}>
+              {granting ? <span className="animate-pulse">{adapter === "contract" ? "Waiting for Monad…" : "Saving permission…"}</span> : <><Icon name="shield" size={16} /> {adapter === "contract" ? "Sign & Grant on Monad" : "Grant Permission"}</>}
             </button>
           </div>
-        </div>
+        </form>
 
         {/* Permission List */}
         <div className="glass-card" style={{ padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h3 className="panel-title no-margin"><Icon name="sliders" size={17} /> Active permissions</h3>
+            <h3 className="panel-title no-margin"><Icon name="sliders" size={17} /> Permission history</h3>
             <button className="btn btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={loadPermissions}>
               <Icon name="refresh" size={14} /> Refresh
             </button>
@@ -406,4 +412,9 @@ export default function PermissionsPage() {
       </div>
     </div>
   );
+}
+
+export default function PermissionsPage() {
+  const { address } = useAuth();
+  return <PermissionsPageContent key={address ?? "signed-out"} />;
 }
