@@ -6,7 +6,7 @@
   "status": "deployed",
   "updatedAt": "2026-10-08T21:17:59.261Z",
   "paymentTokenAddress": "0xdDa9B63b3e2996A62933cea050A46ACb08E987db",
-  "paymentTokenIsDemo": false,
+  "paymentTokenIsDemo": true,
   "paymentTokenDecimals": 6,
   "paymentTokenSymbol": "aUSD-TEST",
   "aegisTransactionHash": "0xf4871122c1953621af07faed265851e79b547926461599100427c48a73de8fa2",

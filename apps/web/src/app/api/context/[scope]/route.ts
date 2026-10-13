@@ -10,6 +10,7 @@ import { apiError } from "@/lib/utils";
 import { CONTRACT_DATA_ACTION, type Address, type DataScope } from "@aegis/sdk";
 import { requireAgent, requireContractAgent } from "@/lib/server-auth";
 import { checkContractContext } from "@/lib/contract-permission";
+import { livePermission } from "@/lib/chain";
 
 export async function GET(
   request: NextRequest,
@@ -37,12 +38,15 @@ export async function GET(
   if (contractMode && !permissionId) {
     return apiError(400, "INVALID_PERMISSION_ID", "permissionId is required in contract mode");
   }
+  // Resolve authority from the grant so delegated agents are authenticated too.
+  const live = contractMode ? await livePermission(BigInt(permissionId!)) : undefined;
+  if (live && live.status !== 0) return apiError(403, "CONTRACT_DENIED", "Permission or an ancestor is inactive.");
   const identity = contractMode
     ? await requireContractAgent(request, {
         agentId,
         permissionId: permissionId!,
         action: CONTRACT_DATA_ACTION[scope],
-      })
+      }, { agentId: live!.permission.agentId.toString(), actor: live!.permission.agent })
     : await requireAgent(request);
   if (identity instanceof Response) return identity;
   if (agentId !== identity) return apiError(403, "AGENT_MISMATCH", "Authentication is not bound to this agent");
@@ -53,6 +57,7 @@ export async function GET(
       user: user as Address,
       agentId,
       dataScope: scope,
+      authenticatedActor: live!.permission.agent,
     });
     if (chainDecision.outcome !== "allow") {
       const status = chainDecision.contractStatus === undefined

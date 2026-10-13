@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, limit);
 
+  // The indexer is a display accelerator; authorization uses live contract checks.
   return Response.json({ activity, indexerAvailable }, { headers: { "Cache-Control": "no-store" } });
   } catch { return apiError(503, "ACTIVITY_UNAVAILABLE", "Activity storage is unavailable"); }
 }

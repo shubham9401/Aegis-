@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatExpiry, reasonMessage } from "@/lib/utils";
 import { ConnectionGate } from "@/components/ConnectionGate";
 import { Icon, type IconName } from "@/components/Icon";
+import ChainEvents from "@/components/ChainEvents";
 
 interface ActivityEntry {
   id: string;
@@ -80,6 +81,7 @@ export default function ActivityPage() {
   return (
     <div className="page-container">
       <h1 className="page-title">Activity</h1>
+      {process.env.NEXT_PUBLIC_ADAPTER === "contract" ? <ChainEvents /> : null}
       <p className="page-subtitle">
         Recorded permission changes and app decisions, newest first. This feed covers requests made through Aegis.
       </p>

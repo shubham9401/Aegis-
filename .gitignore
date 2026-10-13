@@ -7,3 +7,6 @@ coverage/
 !.env.example
 .DS_Store
 Thumbs.db
+
+.aegis-data/
+*.keystore.json

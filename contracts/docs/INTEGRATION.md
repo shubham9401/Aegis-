@@ -6,7 +6,7 @@ Network: Monad testnet, chain ID 10143. RPC: `https://testnet-rpc.monad.xyz` (di
 
 ERC-8004 registry: `0x8004A818BFB912233c491871b3d84c89A494BD9e`. This deployment was listed by the ERC-8004 project and checked for bytecode/ERC-721 support through the testnet RPC. It is not an Aegis contract address.
 
-Aegis and payment-token addresses come from `deployments/monad-testnet.json` after deployment. That file does not exist before deployment. Use the ABI in `artifacts/AegisPermissions.abi.json` or `integration/abi.ts`.
+Aegis and payment-token addresses come from `deployments/monad-testnet.json` after deployment. The current manifest records the already deployed contract. Use the ABI in `artifacts/AegisPermissions.abi.json` or `integration/abi.ts`.
 
 ## Data model
 

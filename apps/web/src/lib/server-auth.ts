@@ -88,11 +88,12 @@ interface ContractAgentRequest {
 export async function requireContractAgent(
   request: Request,
   expected: ContractAgentRequest,
+  verifiedIdentity?: { agentId: string; actor: Address },
 ): Promise<string | Response> {
   const origin = checkOrigin(request);
   if (origin) return origin;
-  const configuredAgentId = process.env.AEGIS_AGENT_ID?.trim();
-  const actorRaw = process.env.AEGIS_AGENT_ADDRESS?.trim();
+  const configuredAgentId = verifiedIdentity?.agentId ?? process.env.AEGIS_AGENT_ID?.trim();
+  const actorRaw = verifiedIdentity?.actor ?? process.env.AEGIS_AGENT_ADDRESS?.trim();
   const contractRaw = process.env.AEGIS_CONTRACT_ADDRESS?.trim();
   const resourceScope = process.env.AEGIS_RESOURCE_SCOPE?.trim();
   const audience = process.env.AEGIS_APP_ORIGIN?.trim() || new URL(request.url).origin;

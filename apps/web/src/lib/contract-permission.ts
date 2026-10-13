@@ -65,12 +65,13 @@ export interface ContractContextCheck {
   user: Address;
   agentId: string;
   dataScope: DataScope;
+  authenticatedActor?: Address;
 }
 
 export async function checkContractContext(input: ContractContextCheck) {
   const permissionId = parsePositiveInteger(input.permissionId, "permissionId");
   const agentId = parseNonNegativeInteger(input.agentId, "agentId");
-  const actor = requiredAddress("AEGIS_AGENT_ADDRESS");
+  const actor = input.authenticatedActor ?? requiredAddress("AEGIS_AGENT_ADDRESS");
   const contractAddress = requiredAddress("AEGIS_CONTRACT_ADDRESS");
   const expectedResourceScope = requiredBytes32("AEGIS_RESOURCE_SCOPE");
   const rpcUrl = process.env.MONAD_RPC_URL?.trim()

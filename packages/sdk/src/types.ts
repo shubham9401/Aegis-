@@ -52,6 +52,7 @@ export interface ActionRequest extends RequestBase {
 export type AgentRequest = DataAccessRequest | ActionRequest;
 
 export type DecisionReason =
+  | "REQUEST_ALREADY_USED"
   | "PERMISSION_NOT_FOUND"
   | "PERMISSION_REVOKED"
   | "PERMISSION_EXPIRED"

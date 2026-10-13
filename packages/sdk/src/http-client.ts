@@ -1,4 +1,5 @@
 import type { Address, AgentAction, DataScope } from "./types.js";
+import type { ChainPaymentRequest } from "./chain-model.js";
 
 export interface AegisApiClientOptions {
   baseUrl: string;
@@ -140,6 +141,15 @@ export class AegisApiClient {
       },
       true,
     );
+  }
+
+  /** Signed request; repeat the exact payload to poll its live on-chain outcome. */
+  async requestChainPayment(request: ChainPaymentRequest): Promise<{ outcome: string }> {
+    return this.#request("/api/chain/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }, false);
+  }
+
+  async plan(userRequest: string): Promise<{ plan: { summary: string; requestedDataScopes: DataScope[]; proposedAction: { action: AgentAction; amountMinor: string; currency: string; service: string } } }> {
+    return this.#request("/api/agent/plan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userRequest }) }, true);
   }
 
   async getApproval(approvalId: string): Promise<ApprovalRecord> {

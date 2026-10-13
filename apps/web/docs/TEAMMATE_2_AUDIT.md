@@ -1,3 +1,5 @@
+> Historical audit, 8 October. Several gaps below were addressed in the later integration. See `docs/LOCAL-RUNBOOK.md` and `docs/IMPLEMENTATION-DECISIONS.md` for current behavior and acceptance tasks.
+
 # Teammate 2 audit — 8 October 2026
 
 Scope: `D:/Coding/Aegis/docs/AEGIS.md`, repo team plan, app implementation, SDK integration, and teammate 1's deployed contract handoff. Changes are confined to the user-app ownership area; dependency installation may update the shared npm lockfile. No contracts, SDK, or agent implementation was changed.

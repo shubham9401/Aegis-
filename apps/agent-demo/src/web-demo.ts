@@ -1,4 +1,4 @@
-import { AegisApiClient, AegisApiError, type Address, type Bytes32 } from "@aegis/sdk";
+import { AegisApiClient, AegisApiError, CHAIN_STATUS, type Address, type Bytes32 } from "@aegis/sdk";
 import { hexlify, randomBytes } from "ethers";
 import { createPlanner, plannerName, planWithFallback } from "./planner-factory.js";
 import { createAgentRuntime } from "./agent-proof.js";
@@ -20,10 +20,9 @@ const api = new AegisApiClient({
   ...(agentRuntime ? { contextProofProvider: agentRuntime.contextProofProvider } : {}),
 });
 const planner = createPlanner();
-const plan = await planWithFallback(planner, userRequest);
+const plan = contractMode ? (await api.plan(userRequest)).plan : await planWithFallback(planner, userRequest);
 
-console.log(`Planner: ${plannerName(planner)}`);
-console.log("Plan:", plan.summary);
+console.log(`Planner: ${contractMode ? "server Kimi" : plannerName(planner)}`);
 console.log(`Aegis service: ${baseUrl}`);
 
 for (const scope of plan.requestedDataScopes) {
@@ -42,11 +41,38 @@ for (const scope of plan.requestedDataScopes) {
 const requestId = contractMode ? hexlify(randomBytes(32)) as Bytes32 : crypto.randomUUID();
 const paymentPolicy = agentRuntime ? await agentRuntime.paymentPolicy(permissionId) : undefined;
 const paymentRecipient = paymentPolicy?.recipient ?? plan.proposedAction.service;
-// Contract mode deliberately exceeds the automatic cap so the one-use approval path is exercised.
-const paymentAmountMinor = paymentPolicy
-  ? (paymentPolicy.spendingLimitMinor + 10_000n).toString()
-  : plan.proposedAction.amountMinor;
+const paymentAmountMinor = plan.proposedAction.amountMinor;
 try {
+  if (agentRuntime) {
+    if (plan.proposedAction.action !== "travel:book" || plan.proposedAction.currency !== "USD") {
+      throw new Error("The connected payment requires a USD travel:book action.");
+    }
+    if (plan.proposedAction.service.toLowerCase() !== paymentRecipient.toLowerCase()) {
+      throw new Error("The proposed service does not match the approved merchant wallet.");
+    }
+    const status = await agentRuntime.paymentStatus({ permissionId, recipient: paymentRecipient as Address, amountMinor: paymentAmountMinor });
+    if (status === 0) {
+      const transactionHash = await agentRuntime.pay({ permissionId, requestId: requestId as Bytes32, recipient: paymentRecipient as Address, amountMinor: paymentAmountMinor });
+      console.log("Automatic test-token payment confirmed:", { transactionHash, amountMinor: paymentAmountMinor, recipient: paymentRecipient });
+    } else if (status !== 10) {
+      throw new Error(`Aegis blocked the payment: ${CHAIN_STATUS[status] ?? status}`);
+    } else {
+      await requestExtraApproval();
+    }
+  } else {
+    await requestExtraApproval();
+  }
+} catch (error) {
+  if (error instanceof AegisApiError) {
+    console.error(`Aegis denied the booking request: ${error.reason}`);
+    if (error.detail) console.error(error.detail);
+    process.exitCode = 1;
+  } else {
+    throw error;
+  }
+}
+
+async function requestExtraApproval() {
   const pending = await api.requestApproval({
     permissionId,
     requestId,
@@ -57,7 +83,7 @@ try {
     currency: plan.proposedAction.currency,
     service: paymentRecipient,
     deadline: Math.floor(Date.now() / 1_000) + 300,
-    agentNote: `Travel plan: ${plan.summary}`,
+    agentNote: "Agent requested a travel payment above its automatic allowance.",
   });
 
   console.log(`Approval requested: ${pending.request.approvalId}`);
@@ -87,14 +113,6 @@ try {
     });
   } else {
     console.log("Booking not executed: user rejected the request.");
-  }
-} catch (error) {
-  if (error instanceof AegisApiError) {
-    console.error(`Aegis denied the booking request: ${error.reason}`);
-    if (error.detail) console.error(error.detail);
-    process.exitCode = 1;
-  } else {
-    throw error;
   }
 }
 

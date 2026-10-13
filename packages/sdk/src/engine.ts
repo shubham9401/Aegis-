@@ -17,6 +17,7 @@ export interface AegisClientOptions {
 export class AegisClient {
   readonly #store: PermissionStore;
   readonly #now: () => number;
+  readonly #executions = new Set<string>();
 
   constructor({ store, now = () => Math.floor(Date.now() / 1000) }: AegisClientOptions) {
     this.#store = store;
@@ -88,16 +89,30 @@ export class AegisClient {
     execute: () => Promise<T>,
     approveSensitive?: (decision: Extract<PermissionDecision, { outcome: "approval_required" }>) => Promise<boolean>,
   ): Promise<{ decision: PermissionDecision; executed: boolean; result?: T }> {
-    const decision = await this.check(request);
-    if (decision.outcome === "deny") return { decision, executed: false };
-    if (decision.outcome === "approval_required") {
-      if (!approveSensitive || !(await approveSensitive(decision))) {
+    request = { ...request };
+    const key = `${request.user.toLowerCase()}:${request.agentId}:${request.requestId}`;
+    if (this.#executions.has(key)) return { decision: { outcome: "deny", reason: "REQUEST_ALREADY_USED" }, executed: false };
+    // Reserve synchronously to prevent concurrent execution of the same request.
+    // Local adapter only: real payments use the contract's durable atomic guard.
+    this.#executions.add(key);
+    let invoked = false;
+    try {
+      const decision = await this.check(request);
+      if (decision.outcome === "deny") return { decision, executed: false };
+      if (decision.outcome === "approval_required" && (!approveSensitive || !(await approveSensitive(decision)))) {
         return { decision, executed: false };
       }
+      const current = await this.check(request);
+      if (current.outcome === "deny") return { decision: current, executed: false };
+      if (decision.outcome === "allow" && current.outcome === "approval_required") return { decision: current, executed: false };
+      if (current.permissionId !== decision.permissionId) return { decision: { outcome: "deny", reason: "PERMISSION_CHAIN_INVALID" }, executed: false };
+      invoked = true; // Keep consumed even on an ambiguous executor failure.
+      const result = await execute();
+      return { decision, executed: true, result };
+    } finally {
+      // A request that never reached the executor may be retried with fresh consent.
+      if (!invoked) this.#executions.delete(key);
     }
-
-    const result = await execute();
-    return { decision, executed: true, result };
   }
 
   async #checkParentChain(

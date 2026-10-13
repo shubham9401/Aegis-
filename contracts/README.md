@@ -2,7 +2,7 @@
 
 Solidity permission grants, bounded agent delegation and a token payment vault for the Monad hackathon.
 
-**Status:** contracts implemented, tested locally, and deployed to Monad testnet. Aegis is at `0x37Ba78B771FC28Dc03387c8777997F751120664D`; the demo `aUSD-TEST` token is at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. Public deployment details are recorded in `deployments/monad-testnet.json`. The in-memory demo still uses local test signers, not Mera or Privy.
+**Status:** contracts implemented, tested locally, and deployed to Monad testnet. Aegis is at `0xeDB8F11c9b6F67ba1D51a4cEdc5151D41e4Bfdb3`; the demo `aUSD-TEST` token is at `0xdDa9B63b3e2996A62933cea050A46ACb08E987db`. Public deployment details are recorded in `deployments/monad-testnet.json`. The in-memory demo still uses local test signers, not Mera or Privy.
 
 ## Start here
 

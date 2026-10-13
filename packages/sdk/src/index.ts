@@ -24,6 +24,7 @@ export {
   type ContractPermissionSnapshot,
 } from "./contract-gate.js";
 export { MemoryPermissionStore } from "./memory-store.js";
+export { PAYMENT_REQUEST_TYPES, CHAIN_STATUS, parseTestAmount, centsToTestUnits, type ChainPaymentRequest } from "./chain-model.js";
 export type {
   ActionRequest,
   ActionRule,
