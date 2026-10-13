@@ -9,6 +9,7 @@ import { grantPermissionSchema, addressSchema } from "@/lib/validation";
 import { apiError, parseBody } from "@/lib/utils";
 import type { Address, AgentPermission, ActionRule } from "@aegis/sdk";
 import { requireUser } from "@/lib/server-auth";
+import { getServerContractConfig } from "@/lib/aegis-contract";
 
 async function grant(request: NextRequest) {
   const user = await requireUser(request);
@@ -73,7 +74,12 @@ async function list(request: NextRequest) {
   // Serialize bigint fields as strings for JSON
   const serialized = permissions.map(serializePermission);
 
-  return Response.json({ permissions: serialized });
+  const adapter = process.env.NEXT_PUBLIC_ADAPTER ?? "demo";
+  return Response.json({
+    permissions: serialized,
+    adapter,
+    contract: adapter === "contract" ? getServerContractConfig() : undefined,
+  });
 }
 
 async function revoke(request: NextRequest) {
@@ -121,8 +127,8 @@ function serializePermission(p: AgentPermission) {
 function handle(handler: (request: NextRequest) => Promise<Response>) {
   return async (request: NextRequest) => {
     try {
-      if ((process.env.NEXT_PUBLIC_ADAPTER ?? "demo") !== "demo") {
-        return apiError(503, "ADAPTER_UNAVAILABLE", "Contract/SDK policy mapping requires agreement with teammates 1 and 3.");
+      if ((process.env.NEXT_PUBLIC_ADAPTER ?? "demo") === "contract" && request.method !== "GET") {
+        return apiError(405, "USER_SIGNATURE_REQUIRED", "Grant and revoke transactions must be signed with the user's passkey in the browser.");
       }
       const response = await handler(request);
       response.headers.set("Cache-Control", "no-store");

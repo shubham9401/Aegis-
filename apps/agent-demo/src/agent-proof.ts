@@ -3,7 +3,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 
-import { Wallet, getAddress, hexlify, randomBytes } from "ethers";
+import { Contract, JsonRpcProvider, Wallet, getAddress, hexlify, randomBytes } from "ethers";
 import {
   CONTRACT_DATA_ACTION,
   type Address,
@@ -23,8 +23,14 @@ const dataRequestTypes: Record<string, Array<{ name: string; type: string }>> = 
   ],
 };
 
-/** Load an external encrypted agent wallet and create one-use context proofs. */
-export async function createAgentContextProofProvider(): Promise<ContextProofProvider> {
+export interface AgentRuntime {
+  contextProofProvider: ContextProofProvider;
+  paymentPolicy(permissionId: string): Promise<{ recipient: Address; spendingLimitMinor: bigint }>;
+  pay(input: { permissionId: string; requestId: Bytes32; recipient: Address; amountMinor: string }): Promise<string>;
+}
+
+/** Load the external encrypted ERC-8004 owner once for signed gateway requests and payments. */
+export async function createAgentRuntime(): Promise<AgentRuntime> {
   const keystorePath = externalKeystore(required("AEGIS_AGENT_KEYSTORE_PATH"));
   const configuredActor = getAddress(required("AEGIS_AGENT_ADDRESS")) as Address;
   const verifyingContract = getAddress(required("AEGIS_CONTRACT_ADDRESS"));
@@ -36,13 +42,20 @@ export async function createAgentContextProofProvider(): Promise<ContextProofPro
     throw new Error("Agent keystore does not match AEGIS_AGENT_ADDRESS");
   }
 
-  return async (request) => {
+  const rpcUrl = process.env.MONAD_RPC_URL?.trim() || process.env.NEXT_PUBLIC_RPC_URL?.trim() || "https://testnet-rpc.monad.xyz";
+  const provider = new JsonRpcProvider(rpcUrl, 10143, { staticNetwork: true });
+  const signer = wallet.connect(provider);
+  const contract = new Contract(verifyingContract, [
+    "function getPermission(uint256 id) view returns (tuple(address user,address issuer,address agent,address paymentRecipient,uint256 agentId,uint256 parentId,uint256 rootId,bytes32 scope,uint256 actions,uint256 spendingLimit,uint256 spent,uint256 approvedSpent,uint64 expiresAt,uint8 depth,bool canDelegate,bool revoked))",
+    "function pay(uint256 id,address recipient,uint256 amount,bytes32 requestId)",
+  ], signer);
+  const contextProofProvider: ContextProofProvider = async (request) => {
     if (!request.permissionId || !/^[1-9]\d*$/.test(request.permissionId)) {
       throw new Error("A positive numeric permissionId is required for a signed context request");
     }
     const requestId = hexlify(randomBytes(32)) as Bytes32;
     const deadline = Math.floor(Date.now() / 1000) + 60;
-    const signature = await wallet.signTypedData(
+    const signature = await signer.signTypedData(
       {
         name: "AegisDataGateway",
         version: "1",
@@ -61,6 +74,32 @@ export async function createAgentContextProofProvider(): Promise<ContextProofPro
     );
     return { requestId, deadline, signature: signature as `0x${string}` };
   };
+
+  return {
+    contextProofProvider,
+    async paymentPolicy(permissionId) {
+      if (!/^[1-9]\d*$/.test(permissionId)) throw new Error("A positive numeric permissionId is required for payment");
+      const permission = await contract.getFunction("getPermission")(BigInt(permissionId));
+      return {
+        recipient: getAddress(permission.paymentRecipient) as Address,
+        spendingLimitMinor: BigInt(permission.spendingLimit) / 10_000n,
+      };
+    },
+    async pay({ permissionId, requestId, recipient, amountMinor }) {
+      if (!/^[1-9]\d*$/.test(permissionId)) throw new Error("A positive numeric permissionId is required for payment");
+      if (!/^0x[a-fA-F0-9]{64}$/.test(requestId)) throw new Error("Payment requestId must be bytes32");
+      const amount = BigInt(amountMinor) * 10_000n;
+      const transaction = await contract.getFunction("pay")(BigInt(permissionId), getAddress(recipient), amount, requestId);
+      const receipt = await transaction.wait();
+      if (!receipt || receipt.status !== 1) throw new Error("The Aegis payment transaction reverted");
+      return receipt.hash;
+    },
+  };
+}
+
+/** Backward-compatible helper for consumers that only need context proofs. */
+export async function createAgentContextProofProvider(): Promise<ContextProofProvider> {
+  return (await createAgentRuntime()).contextProofProvider;
 }
 
 function required(name: string): string {

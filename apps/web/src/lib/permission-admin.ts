@@ -9,6 +9,12 @@ import {
 import { readLocalStore, writeLocalStore } from "./local-store";
 import { z } from "zod";
 import { actionRuleSchema, addressSchema, dataScopeSchema } from "./validation";
+import {
+  aegisContractAbi,
+  contractRecordToPermission,
+  getContractPublicClient,
+  getServerContractConfig,
+} from "./aegis-contract";
 
 const persistedPermissionSchema = z.object({
   permissionId: z.string().min(1).max(256),
@@ -102,14 +108,40 @@ export class DemoPermissionAdmin implements PermissionAdmin {
   }
 }
 
-// OPEN: contracts/docs/INTEGRATION.md is available, but its PAY/resource model
-// does not match the SDK's service/currency/threshold policy. See the audit.
+export class ContractPermissionAdmin implements PermissionAdmin {
+  async grant(): Promise<never> {
+    throw new Error("Contract grants must be signed by the user's passkey in the browser.");
+  }
+
+  async revoke(): Promise<never> {
+    throw new Error("Contract revocations must be signed by the user's passkey in the browser.");
+  }
+
+  async list(user: Address): Promise<AgentPermission[]> {
+    const client = getContractPublicClient();
+    const { address } = getServerContractConfig();
+    const nextPermissionId = await client.readContract({
+      address,
+      abi: aegisContractAbi,
+      functionName: "nextPermissionId",
+    });
+    const ids = Array.from({ length: Number(nextPermissionId - 1n) }, (_, index) => BigInt(index + 1));
+    const permissions = await Promise.all(ids.map(async (id) => {
+      const [record, status] = await Promise.all([
+        client.readContract({ address, abi: aegisContractAbi, functionName: "getPermission", args: [id] }),
+        client.readContract({ address, abi: aegisContractAbi, functionName: "permissionStatus", args: [id] }),
+      ]);
+      return contractRecordToPermission(id, record, Number(status));
+    }));
+    return permissions.filter((permission) => permission.user.toLowerCase() === user.toLowerCase());
+  }
+}
 
 /** Get the configured admin. */
 export function getPermissionAdmin(): PermissionAdmin {
   const adapter = process.env.NEXT_PUBLIC_ADAPTER ?? "demo";
   if (adapter === "contract") {
-    throw new Error("Contract/SDK policy mapping is not agreed. Contract mode is disabled until the team confirms the interface.");
+    return new ContractPermissionAdmin();
   }
   if (adapter !== "demo") throw new Error("Unsupported permission adapter");
   return new DemoPermissionAdmin();
@@ -118,6 +150,9 @@ export function getPermissionAdmin(): PermissionAdmin {
 /** Get the shared PermissionStore for use with AegisClient. */
 export function getPermissionStore(): MemoryPermissionStore {
   // Fail closed: contract mode must never accidentally authorize from local state.
+  if ((process.env.NEXT_PUBLIC_ADAPTER ?? "demo") === "contract") {
+    throw new Error("The local permission store is disabled in contract mode.");
+  }
   getPermissionAdmin();
   return getStore();
 }

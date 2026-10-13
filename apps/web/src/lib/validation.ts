@@ -74,7 +74,7 @@ export const contextQuerySchema = z.object({
 
 export const createApprovalSchema = z.object({
   permissionId: identifierSchema,
-  requestId: z.string().uuid(),
+  requestId: z.string().uuid().or(z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Expected a UUID or bytes32 request ID")),
   user: addressSchema,
   agentId: identifierSchema,
   action: agentActionSchema,
@@ -85,12 +85,18 @@ export const createApprovalSchema = z.object({
   agentNote: z.string().max(500).optional(),
 });
 
-export const approvalDecisionSchema = z.discriminatedUnion("outcome", [
+export const approvalDecisionSchema = z.union([
   z.object({
     outcome: z.literal("approved"),
     signer: addressSchema,
     signature: z.string().regex(/^0x[a-fA-F0-9]{130}$/, "Expected a 65-byte signature"),
     nonce: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Expected a bytes32 nonce"),
+    signedAt: z.number().int().positive().optional(),
+  }),
+  z.object({
+    outcome: z.literal("approved"),
+    signer: addressSchema,
+    transactionHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Expected a transaction hash"),
     signedAt: z.number().int().positive().optional(),
   }),
   z.object({

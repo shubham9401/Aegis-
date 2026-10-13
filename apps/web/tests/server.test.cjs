@@ -8,7 +8,7 @@ const { join, resolve } = require('node:path');
 const { privateKeyToAccount } = require('viem/accounts');
 const { encrypt, decrypt, vaultWrite, vaultDecrypt } = require('../src/lib/vault.ts');
 const { createApproval, decideApproval, getApproval, verifyApprovalSignature } = require('../src/lib/approval-store.ts');
-const { amountMinorSchema, activityQuerySchema, grantPermissionSchema } = require('../src/lib/validation.ts');
+const { amountMinorSchema, activityQuerySchema, approvalDecisionSchema, createApprovalSchema, grantPermissionSchema } = require('../src/lib/validation.ts');
 const { AEGIS_EIP712_DOMAIN, ACTION_APPROVAL_TYPES } = require('../src/lib/eip712.ts');
 
 process.env.VAULT_SERVER_KEY = randomBytes(32).toString('base64');
@@ -88,4 +88,19 @@ test('permission grants reject empty rights, ambiguous duplicate rules and impos
   assert.equal(grantPermissionSchema.safeParse({ ...grant, actionRules: [rule, rule] }).success, false);
   assert.equal(grantPermissionSchema.safeParse({ ...grant, actionRules: [{ ...rule, requireApprovalAboveMinor: '101' }] }).success, false);
   assert.equal(grantPermissionSchema.safeParse({ ...grant, actionRules: [rule] }).success, true);
+});
+
+test('contract approvals require bytes32-compatible requests and accept transaction receipts', () => {
+  const input = {
+    permissionId: '1', requestId: `0x${'ab'.repeat(32)}`, user: account.address, agentId: '2088',
+    action: 'travel:book', amountMinor: '60000', currency: 'USD', service: `0x${'34'.repeat(20)}`, deadline: now + 60,
+  };
+  assert.equal(createApprovalSchema.safeParse(input).success, true);
+  assert.equal(createApprovalSchema.safeParse({ ...input, requestId: 'not-a-request-id' }).success, false);
+  assert.equal(approvalDecisionSchema.safeParse({
+    outcome: 'approved', signer: account.address, transactionHash: `0x${'56'.repeat(32)}`,
+  }).success, true);
+  assert.equal(approvalDecisionSchema.safeParse({
+    outcome: 'approved', signer: account.address, transactionHash: '0x1234',
+  }).success, false);
 });

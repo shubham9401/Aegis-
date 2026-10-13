@@ -56,6 +56,13 @@ export type ApprovalResult =
       nonce: `0x${string}`;
       signedAt: number;
     }
+  | {
+      approvalId: string;
+      outcome: "approved";
+      signer: Address;
+      transactionHash: `0x${string}`;
+      signedAt: number;
+    }
   | { approvalId: string; outcome: "rejected"; signedAt: number };
 
 export interface ApprovalRecord {

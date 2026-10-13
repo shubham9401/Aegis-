@@ -9,6 +9,7 @@ import type { Address } from "@aegis/sdk";
 import { requireUser } from "@/lib/server-auth";
 import { getAegisClient } from "@/lib/aegis";
 import { verifyApprovalSignature } from "@/lib/approval-store";
+import { confirmContractApproval, isContractAdapter } from "@/lib/contract-payments";
 
 export async function POST(
   request: NextRequest,
@@ -44,19 +45,40 @@ export async function POST(
 
   if (parsed.outcome === "approved") {
     const action = existing.request;
-    const decision = await getAegisClient().check({
-      ...action, kind: "action", requestedAt: now, amountMinor: BigInt(action.amountMinor),
-    });
-    if (decision.outcome === "deny") return apiError(403, decision.reason, "Permission no longer allows this action");
-    if (decision.permissionId !== action.permissionId) return apiError(409, "PERMISSION_MISMATCH", "Permission changed since this request");
-    if (!(await verifyApprovalSignature(action, parsed.signature as `0x${string}`, parsed.nonce as `0x${string}`))) {
-      return apiError(403, "INVALID_SIGNATURE", "Signature does not match the owner and structured action");
+    if (isContractAdapter()) {
+      if (!("transactionHash" in parsed)) {
+        return apiError(400, "ONCHAIN_APPROVAL_REQUIRED", "Approve this exact payment on Monad with the passkey account");
+      }
+      try {
+        await confirmContractApproval(action, parsed.transactionHash as `0x${string}`);
+      } catch (error) {
+        return apiError(403, error instanceof Error ? error.message : "INVALID_APPROVAL_TRANSACTION",
+          "The transaction does not record this exact one-use payment approval");
+      }
+    } else {
+      if (!("signature" in parsed)) {
+        return apiError(400, "OFFCHAIN_SIGNATURE_REQUIRED", "Sign the structured approval with the passkey account");
+      }
+      const decision = await getAegisClient().check({
+        ...action, kind: "action", requestedAt: now, amountMinor: BigInt(action.amountMinor),
+      });
+      if (decision.outcome === "deny") return apiError(403, decision.reason, "Permission no longer allows this action");
+      if (decision.permissionId !== action.permissionId) return apiError(409, "PERMISSION_MISMATCH", "Permission changed since this request");
+      if (!(await verifyApprovalSignature(action, parsed.signature as `0x${string}`, parsed.nonce as `0x${string}`))) {
+        return apiError(403, "INVALID_SIGNATURE", "Signature does not match the owner and structured action");
+      }
     }
   }
 
   const result =
     parsed.outcome === "approved"
-      ? {
+      ? "transactionHash" in parsed ? {
+          approvalId: id,
+          outcome: "approved" as const,
+          signer: parsed.signer as Address,
+          transactionHash: parsed.transactionHash as `0x${string}`,
+          signedAt: now,
+        } : {
           approvalId: id,
           outcome: "approved" as const,
           signer: parsed.signer as Address,

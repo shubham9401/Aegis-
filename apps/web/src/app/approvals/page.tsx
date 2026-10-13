@@ -6,6 +6,8 @@ import { formatCurrency, formatExpiry, timeRemaining } from "@/lib/utils";
 import { ConnectionGate } from "@/components/ConnectionGate";
 import { Icon } from "@/components/Icon";
 import type { ApprovalRequest } from "@/lib/approval-store";
+import type { ContractConfig } from "@/lib/aegis-contract";
+import { getAddress, type Hex } from "viem";
 
 interface StoredApproval {
   request: ApprovalRequest;
@@ -16,18 +18,22 @@ interface StoredApproval {
     signer?: string;
     signature?: string;
     nonce?: string;
+    transactionHash?: string;
     signedAt?: number;
   };
 }
 
 export default function ApprovalsPage() {
-  const { isConnected, address, signApproval, authenticatedFetch } = useAuth();
+  const { isConnected, address, signApproval, authenticatedFetch, approveContractPayment, fundContractVault } = useAuth();
   const [approvals, setApprovals] = useState<StoredApproval[]>([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
   const [selectedApproval, setSelectedApproval] = useState<StoredApproval | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [now, setNow] = useState<number | null>(null);
+  const [adapter, setAdapter] = useState(process.env.NEXT_PUBLIC_ADAPTER ?? "demo");
+  const [contractConfig, setContractConfig] = useState<ContractConfig | null>(null);
+  const [funding, setFunding] = useState(false);
 
   const loadApprovals = useCallback(async () => {
     if (!address) return;
@@ -59,6 +65,22 @@ export default function ApprovalsPage() {
   }, [isConnected, address, loadApprovals]);
 
   useEffect(() => {
+    if (!isConnected || !address) return;
+    let cancelled = false;
+    void authenticatedFetch(`/api/permissions?user=${address}`).then(async (response) => {
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.detail ?? "Unable to load contract configuration");
+      if (!cancelled) {
+        setAdapter(body.adapter ?? "demo");
+        setContractConfig(body.contract ?? null);
+      }
+    }).catch((error) => {
+      if (!cancelled) setMessage(`❌ ${error instanceof Error ? error.message : "Unable to load contract configuration"}`);
+    });
+    return () => { cancelled = true; };
+  }, [address, authenticatedFetch, isConnected]);
+
+  useEffect(() => {
     const updateNow = () => setNow(Math.floor(Date.now() / 1000));
     const initial = window.setTimeout(updateNow, 0);
     const interval = window.setInterval(updateNow, 1_000);
@@ -77,14 +99,23 @@ export default function ApprovalsPage() {
       const request = selectedApproval?.request;
       if (!request || request.approvalId !== approvalId) throw new Error("Select the request again.");
       if (request.deadline <= Math.floor(Date.now() / 1000)) throw new Error("This request has expired.");
-      const body =
-        outcome === "approved"
-          ? {
-              outcome: "approved",
-              ...await signApproval(request),
-              signedAt: Math.floor(Date.now() / 1000),
-            }
-          : { outcome: "rejected", signedAt: Math.floor(Date.now() / 1000) };
+      let body: Record<string, unknown>;
+      if (outcome === "approved" && adapter === "contract") {
+        if (!contractConfig) throw new Error("Monad contract configuration is unavailable.");
+        const result = await approveContractPayment({
+          contractAddress: contractConfig.address,
+          permissionId: request.permissionId,
+          requestId: request.requestId as Hex,
+          recipient: getAddress(request.service),
+          amountMinor: request.amountMinor,
+          deadline: request.deadline,
+        });
+        body = { outcome: "approved", signer: address, transactionHash: result.txHash, signedAt: Math.floor(Date.now() / 1000) };
+      } else if (outcome === "approved") {
+        body = { outcome: "approved", ...await signApproval(request), signedAt: Math.floor(Date.now() / 1000) };
+      } else {
+        body = { outcome: "rejected", signedAt: Math.floor(Date.now() / 1000) };
+      }
 
       const res = await authenticatedFetch(`/api/approvals/${approvalId}/decision`, {
         method: "POST",
@@ -93,7 +124,9 @@ export default function ApprovalsPage() {
       });
 
       if (res.ok) {
-        setMessage(outcome === "approved" ? "✅ Passkey approval verified" : "✅ Request rejected");
+        setMessage(outcome === "approved"
+          ? adapter === "contract" ? "✅ One-use payment approval recorded and verified on Monad" : "✅ Passkey approval verified"
+          : "✅ Request rejected");
         setSelectedApproval(null);
         loadApprovals();
       } else {
@@ -104,6 +137,20 @@ export default function ApprovalsPage() {
       setMessage(`❌ ${e instanceof Error ? e.message : "Failed"}`);
     } finally {
       setProcessing(null);
+    }
+  };
+
+  const handleFundVault = async () => {
+    if (!contractConfig) return;
+    setFunding(true);
+    setMessage(null);
+    try {
+      const result = await fundContractVault(contractConfig.address, "100000");
+      setMessage(`✅ Minted and deposited $1,000 test aUSD · ${result.depositTxHash.slice(0, 10)}…`);
+    } catch (error) {
+      setMessage(`❌ ${error instanceof Error ? error.message : "Vault funding failed"}`);
+    } finally {
+      setFunding(false);
     }
   };
 
@@ -246,7 +293,9 @@ export default function ApprovalsPage() {
           <div className="modal-content" role="dialog" aria-modal="true" aria-label="Action approval" onClick={(e) => e.stopPropagation()}>
             <h3 className="panel-title"><Icon name="key" size={18} /> Action approval</h3>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 24 }}>
-              Review these structured request fields. Approve opens a fresh passkey prompt and signs EIP-712 typed data.
+              {adapter === "contract"
+                ? "Review the exact recipient, amount, and deadline. Approve opens your passkey and records a one-use payment consent on Monad."
+                : "Review these structured request fields. Approve opens a fresh passkey prompt and signs EIP-712 typed data."}
             </p>
 
             {/* Structured fields only */}
@@ -315,7 +364,7 @@ export default function ApprovalsPage() {
                 disabled={processing !== null || selectedApproval.result.outcome !== "pending" || now === null || isExpired(selectedApproval.request.deadline)}
               >
                 {processing === selectedApproval.request.approvalId ? (
-                  <span className="animate-pulse">Signing…</span>
+                  <span className="animate-pulse">{adapter === "contract" ? "Recording on Monad…" : "Signing…"}</span>
                 ) : (
                   isExpired(selectedApproval.request.deadline) ? "Request expired" : "Approve with passkey"
                 )}
@@ -329,11 +378,18 @@ export default function ApprovalsPage() {
                 ✕ Reject
               </button>
             </div>
+            {adapter === "contract" && (
+              <button className="btn btn-ghost" style={{ width: "100%", marginTop: 12 }} disabled={funding || processing !== null} onClick={handleFundVault}>
+                {funding ? "Funding test vault…" : "Mint & deposit $1,000 test aUSD"}
+              </button>
+            )}
             {message?.startsWith("❌") ? <p role="alert" className="alert-error">{message}</p> : null}
             <button className="btn btn-ghost" disabled={processing !== null} onClick={() => setSelectedApproval(null)}>Close</button>
 
             <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 12, textAlign: "center" }}>
-              Only structured values are shown above. The approval is signed with EIP-712 typed data.
+              {adapter === "contract"
+                ? "The demo token has no monetary value. The contract accepts only this exact request ID, recipient, amount, and deadline."
+                : "Only structured values are shown above. The approval is signed with EIP-712 typed data."}
             </p>
           </div>
         </div>

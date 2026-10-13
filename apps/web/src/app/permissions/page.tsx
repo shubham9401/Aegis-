@@ -5,6 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { decimalToMinorUnits, formatCurrency, formatExpiry, timeRemaining } from "@/lib/utils";
 import { ConnectionGate } from "@/components/ConnectionGate";
 import { Icon } from "@/components/Icon";
+import { actionsForGrant, minorToTokenUnits, type ContractConfig } from "@/lib/aegis-contract";
+import { getAddress, isAddress, zeroAddress } from "viem";
+import type { DataScope } from "@aegis/sdk";
 
 const AVAILABLE_SCOPES = [
   "profile:dietary-preference",
@@ -28,13 +31,19 @@ interface SerializedPermission {
   }>;
   expiresAt: number;
   revokedAt?: number;
+  contractStatus?: number;
+  agentAddress?: string;
+  canDelegate?: boolean;
+  paymentRecipient?: string;
 }
 
 export default function PermissionsPage() {
-  const { isConnected, address, authenticatedFetch } = useAuth();
+  const { isConnected, address, authenticatedFetch, grantContractPermission, revokeContractPermission } = useAuth();
   const [permissions, setPermissions] = useState<SerializedPermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [adapter, setAdapter] = useState(process.env.NEXT_PUBLIC_ADAPTER ?? "demo");
+  const [contractConfig, setContractConfig] = useState<ContractConfig | null>(null);
 
   // Form state
   const [agentId, setAgentId] = useState("");
@@ -45,6 +54,7 @@ export default function PermissionsPage() {
   const [currency, setCurrency] = useState("USD");
   const [allowedServices, setAllowedServices] = useState("");
   const [expiryHours, setExpiryHours] = useState("24");
+  const [canDelegate, setCanDelegate] = useState(false);
   const [granting, setGranting] = useState(false);
   const [now, setNow] = useState<number | null>(null);
 
@@ -56,6 +66,8 @@ export default function PermissionsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(`${data.error}: ${data.detail ?? "Unable to load permissions"}`);
       setPermissions(data.permissions ?? []);
+      setAdapter(data.adapter ?? "demo");
+      setContractConfig(data.contract ?? null);
     } catch (error) {
       setMessage(`❌ ${error instanceof Error ? error.message : "Unable to load permissions"}`);
     } finally {
@@ -88,9 +100,29 @@ export default function PermissionsPage() {
     try {
       const maxAmountMinor = decimalToMinorUnits(maxAmount);
       const requireApprovalAboveMinor = decimalToMinorUnits(approvalThreshold);
-      if (BigInt(requireApprovalAboveMinor) > BigInt(maxAmountMinor)) throw new Error("Approval threshold cannot exceed the spending limit.");
+      if (adapter === "demo" && BigInt(requireApprovalAboveMinor) > BigInt(maxAmountMinor)) throw new Error("Approval threshold cannot exceed the spending limit.");
       const hours = Number(expiryHours);
       if (!Number.isFinite(hours) || hours <= 0 || hours > 168 || !Number.isInteger(hours * 3600)) throw new Error("Expiry must be greater than zero and at most 168 hours.");
+      if (adapter === "contract") {
+        if (!contractConfig) throw new Error("Monad contract configuration is unavailable.");
+        if (!/^(0|[1-9]\d*)$/.test(agentId)) throw new Error("Agent ID must be the numeric ERC-8004 token ID, for example 2088.");
+        const isPayment = action === "travel:book";
+        const recipient = allowedServices.trim();
+        if (isPayment && !isAddress(recipient)) throw new Error("Enter the allowed service's Monad payment address.");
+        const result = await grantContractPermission({
+          contractAddress: contractConfig.address,
+          resourceScope: contractConfig.resourceScope,
+          agentId,
+          actions: actionsForGrant(selectedScopes as DataScope[], action as "travel:search" | "travel:book").toString(),
+          spendingLimit: isPayment ? minorToTokenUnits(BigInt(maxAmountMinor)).toString() : "0",
+          expiresAt: Math.floor(Date.now() / 1000) + hours * 3600,
+          canDelegate,
+          paymentRecipient: isPayment ? getAddress(recipient) : zeroAddress,
+        });
+        setMessage(`✅ Permission ${result.permissionId} recorded on Monad · ${result.txHash.slice(0, 10)}…`);
+        await loadPermissions();
+        return;
+      }
       const res = await authenticatedFetch("/api/permissions", {
         method: "POST",
         headers: {
@@ -127,12 +159,19 @@ export default function PermissionsPage() {
     }
   };
 
-  const handleRevoke = async (agentIdToRevoke: string) => {
+  const handleRevoke = async (permission: SerializedPermission) => {
     if (!address) return;
-    if (!confirm(`Revoke all permissions for agent ${agentIdToRevoke}? This cannot be undone.`)) return;
+    if (!confirm(`Revoke permission ${permission.permissionId} for agent ${permission.agentId}? This cannot be undone.`)) return;
 
     try {
-      const res = await authenticatedFetch(`/api/permissions?user=${address}&agentId=${encodeURIComponent(agentIdToRevoke)}`, {
+      if (adapter === "contract") {
+        if (!contractConfig) throw new Error("Monad contract configuration is unavailable.");
+        const result = await revokeContractPermission(contractConfig.address, permission.permissionId);
+        setMessage(`✅ Permission revoked on Monad · ${result.txHash.slice(0, 10)}…`);
+        await loadPermissions();
+        return;
+      }
+      const res = await authenticatedFetch(`/api/permissions?user=${address}&agentId=${encodeURIComponent(permission.agentId)}`, {
         method: "DELETE",
       });
 
@@ -155,6 +194,7 @@ export default function PermissionsPage() {
   };
 
   const getStatus = (p: SerializedPermission) => {
+    if (p.contractStatus !== undefined && ![0, 2, 3].includes(p.contractStatus)) return "invalid";
     if (p.revokedAt !== undefined) return "revoked";
     if (now !== null && p.expiresAt <= now) return "expired";
     return "active";
@@ -174,7 +214,9 @@ export default function PermissionsPage() {
     <div className="page-container">
       <h1 className="page-title">Permissions</h1>
       <p className="page-subtitle">Grant, view, and revoke agent permissions. The SDK checks every request deterministically.</p>
-      <p className="page-subtitle">Local policy store. Grants and revocations are not yet recorded on Monad; contract integration requires the team’s agreed scope and payment mapping. Agent IDs here are labels, not verified ERC-8004 identities.</p>
+      <p className="page-subtitle">{adapter === "contract"
+        ? "Live Monad mode. Grants and revocations are user-signed with your Mera passkey and agents are resolved through ERC-8004. Private profile values remain encrypted off-chain."
+        : "Local demo mode. Permissions are stored locally and are not recorded on Monad."}</p>
 
       {message && (
         <div style={{
@@ -198,7 +240,7 @@ export default function PermissionsPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <label className="label">Agent ID</label>
-              <input className="input" value={agentId} onChange={(e) => setAgentId(e.target.value)} placeholder="erc8004:monad:agent-id" />
+              <input className="input" value={agentId} onChange={(e) => setAgentId(e.target.value)} placeholder={adapter === "contract" ? "2088" : "erc8004:monad:agent-id"} />
             </div>
 
             <div>
@@ -233,10 +275,13 @@ export default function PermissionsPage() {
               <label className="label">Max Amount (two decimal units)</label>
                 <input className="input" type="number" step="0.01" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} />
               </div>
-              <div>
-                <label className="label">Approval Above (two decimal units)</label>
-                <input className="input" type="number" step="0.01" value={approvalThreshold} onChange={(e) => setApprovalThreshold(e.target.value)} />
-              </div>
+              {adapter === "demo" ? <div>
+                  <label className="label">Approval Above (two decimal units)</label>
+                  <input className="input" type="number" step="0.01" value={approvalThreshold} onChange={(e) => setApprovalThreshold(e.target.value)} />
+                </div> : <div>
+                  <label className="label">Over-limit payments</label>
+                  <div className="input" style={{ display: "flex", alignItems: "center", color: "var(--text-secondary)" }}>Require an explicit passkey approval</div>
+                </div>}
             </div>
 
             <div className="form-grid-2">
@@ -251,12 +296,22 @@ export default function PermissionsPage() {
             </div>
 
             <div>
-              <label className="label">Allowed Services (comma-separated)</label>
-              <input className="input" value={allowedServices} onChange={(e) => setAllowedServices(e.target.value)} placeholder="Service identifier agreed with the agent" />
+              <label className="label">{adapter === "contract" ? "Allowed service payment address" : "Allowed Services (comma-separated)"}</label>
+              <input className="input" value={allowedServices} onChange={(e) => setAllowedServices(e.target.value)} placeholder={adapter === "contract" ? "0x…" : "Service identifier agreed with the agent"} disabled={adapter === "contract" && action !== "travel:book"} />
             </div>
 
-            <button className="btn btn-primary" onClick={handleGrant} disabled={granting || selectedScopes.length === 0 || !agentId.trim() || !allowedServices.trim()}>
-              {granting ? <span className="animate-pulse">Granting…</span> : <><Icon name="shield" size={16} /> Grant Permission</>}
+            {adapter === "contract" && <button
+              type="button"
+              className={`checkbox-label ${canDelegate ? "checked" : ""}`}
+              onClick={() => setCanDelegate((value) => !value)}
+              aria-pressed={canDelegate}
+            >
+              <span className="check-box">{canDelegate ? <Icon name="check" size={12} /> : null}</span>
+              Allow limited agent-to-agent delegation
+            </button>}
+
+            <button className="btn btn-primary" onClick={handleGrant} disabled={granting || selectedScopes.length === 0 || !agentId.trim() || (action === "travel:book" && !allowedServices.trim())}>
+              {granting ? <span className="animate-pulse">Waiting for Monad…</span> : <><Icon name="shield" size={16} /> {adapter === "contract" ? "Sign & Grant on Monad" : "Grant Permission"}</>}
             </button>
           </div>
         </div>
@@ -299,14 +354,18 @@ export default function PermissionsPage() {
                       <span style={{ fontSize: 12, fontFamily: "monospace", color: "var(--text-muted)" }}>
                         {p.permissionId}
                       </span>
-                      <span className={`badge badge-${status}`}>
-                        {status === "active" ? "● Active" : status === "expired" ? "⏱ Expired" : "✕ Revoked"}
+                      <span className={`badge badge-${status === "invalid" ? "revoked" : status}`}>
+                        {status === "active" ? "● Active" : status === "expired" ? "⏱ Expired" : status === "invalid" ? "⚠ Invalid on-chain" : "✕ Revoked"}
                       </span>
                     </div>
 
                     <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
                       Agent: <span style={{ color: "var(--aegis-primary-light)" }}>{p.agentId}</span>
                     </div>
+
+                    {p.agentAddress && <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4, overflowWrap: "anywhere" }}>
+                      ERC-8004 owner: {p.agentAddress}
+                    </div>}
 
                     <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>
                       Scopes: {p.dataScopes.map((s) => s.split(":")[1]).join(", ")}
@@ -325,7 +384,7 @@ export default function PermissionsPage() {
                       {status === "active"
                         ? `Expires: ${formatExpiry(p.expiresAt)} (${timeRemaining(p.expiresAt)})`
                         : status === "revoked"
-                          ? `Revoked at: ${formatExpiry(p.revokedAt!)}`
+                          ? p.contractStatus === 2 ? "Revoked permanently on Monad" : `Revoked at: ${formatExpiry(p.revokedAt!)}`
                           : `Expired at: ${formatExpiry(p.expiresAt)}`}
                     </div>
 
@@ -333,7 +392,7 @@ export default function PermissionsPage() {
                       <button
                         className="btn btn-danger"
                         style={{ marginTop: 10, padding: "6px 14px", fontSize: 12 }}
-                        onClick={() => handleRevoke(p.agentId)}
+                        onClick={() => handleRevoke(p)}
                       >
                         Revoke
                       </button>

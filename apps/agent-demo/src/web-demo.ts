@@ -1,6 +1,7 @@
-import { AegisApiClient, AegisApiError, type Address } from "@aegis/sdk";
+import { AegisApiClient, AegisApiError, type Address, type Bytes32 } from "@aegis/sdk";
+import { hexlify, randomBytes } from "ethers";
 import { createPlanner, plannerName, planWithFallback } from "./planner-factory.js";
-import { createAgentContextProofProvider } from "./agent-proof.js";
+import { createAgentRuntime } from "./agent-proof.js";
 
 const baseUrl = process.env.AEGIS_WEB_URL ?? "http://localhost:3000";
 const agentToken = requiredEnv("AEGIS_DEMO_AGENT_TOKEN");
@@ -11,13 +12,12 @@ const userRequest =
   process.argv.slice(2).join(" ") ||
   "Plan a vegetarian weekend trip and propose a booking under $500.";
 
-const contextProofProvider = process.env.NEXT_PUBLIC_ADAPTER === "contract"
-  ? await createAgentContextProofProvider()
-  : undefined;
+const contractMode = process.env.NEXT_PUBLIC_ADAPTER === "contract";
+const agentRuntime = contractMode ? await createAgentRuntime() : undefined;
 const api = new AegisApiClient({
   baseUrl,
   agentToken,
-  ...(contextProofProvider ? { contextProofProvider } : {}),
+  ...(agentRuntime ? { contextProofProvider: agentRuntime.contextProofProvider } : {}),
 });
 const planner = createPlanner();
 const plan = await planWithFallback(planner, userRequest);
@@ -29,7 +29,7 @@ console.log(`Aegis service: ${baseUrl}`);
 for (const scope of plan.requestedDataScopes) {
   try {
     const released = await api.requestContext({ user, agentId, scope, permissionId });
-    console.log(`Released context (${scope}):`, released.value);
+    console.log(`Protected context released (${scope}); value kept out of logs (${released.value.length} characters).`);
   } catch (error) {
     if (error instanceof AegisApiError) {
       console.log(`Context denied (${scope}):`, error.reason);
@@ -39,7 +39,13 @@ for (const scope of plan.requestedDataScopes) {
   }
 }
 
-const requestId = crypto.randomUUID();
+const requestId = contractMode ? hexlify(randomBytes(32)) as Bytes32 : crypto.randomUUID();
+const paymentPolicy = agentRuntime ? await agentRuntime.paymentPolicy(permissionId) : undefined;
+const paymentRecipient = paymentPolicy?.recipient ?? plan.proposedAction.service;
+// Contract mode deliberately exceeds the automatic cap so the one-use approval path is exercised.
+const paymentAmountMinor = paymentPolicy
+  ? (paymentPolicy.spendingLimitMinor + 10_000n).toString()
+  : plan.proposedAction.amountMinor;
 try {
   const pending = await api.requestApproval({
     permissionId,
@@ -47,9 +53,9 @@ try {
     user,
     agentId,
     action: plan.proposedAction.action,
-    amountMinor: plan.proposedAction.amountMinor,
+    amountMinor: paymentAmountMinor,
     currency: plan.proposedAction.currency,
-    service: plan.proposedAction.service,
+    service: paymentRecipient,
     deadline: Math.floor(Date.now() / 1_000) + 300,
     agentNote: `Travel plan: ${plan.summary}`,
   });
@@ -64,11 +70,20 @@ try {
   });
 
   if (decided.result.outcome === "approved") {
-    console.log("Booking executed after Aegis approval:", {
+    const paymentTxHash = agentRuntime
+      ? await agentRuntime.pay({
+          permissionId,
+          requestId: requestId as Bytes32,
+          recipient: paymentRecipient as Address,
+          amountMinor: paymentAmountMinor,
+        })
+      : undefined;
+    console.log(agentRuntime ? "Booking payment executed through the Aegis vault:" : "Demo booking approved:", {
       action: plan.proposedAction.action,
-      amountMinor: plan.proposedAction.amountMinor,
+      amountMinor: paymentAmountMinor,
       currency: plan.proposedAction.currency,
-      service: plan.proposedAction.service,
+      service: paymentRecipient,
+      ...(paymentTxHash ? { transactionHash: paymentTxHash } : {}),
     });
   } else {
     console.log("Booking not executed: user rejected the request.");

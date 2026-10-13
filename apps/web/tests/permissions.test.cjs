@@ -8,6 +8,7 @@ const { DemoPermissionAdmin, getPermissionStore } = require('../src/lib/permissi
 const { AegisClient } = require('@aegis/sdk');
 const { decimalToMinorUnits, formatCurrency, parseBody } = require('../src/lib/utils.ts');
 const { grantPermissionSchema } = require('../src/lib/validation.ts');
+const { actionsForGrant, minorToTokenUnits, tokenToMinorUnits } = require('../src/lib/aegis-contract.ts');
 
 test('persisted permission grants and revocations survive fresh store initialization', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'aegis-permissions-test-'));
@@ -52,6 +53,27 @@ test('decimal amounts retain precision and invalid decimals are rejected', () =>
   assert.equal(formatCurrency('900719925474099329'), '$9,007,199,254,740,993.29');
   assert.throws(() => decimalToMinorUnits('0.001'));
   assert.throws(() => decimalToMinorUnits('-1'));
+});
+
+test('contract grants map SDK scopes and USD cents to the deployed permission model', () => {
+  assert.equal(
+    actionsForGrant(['profile:dietary-preference', 'profile:travel-budget'], 'travel:book'),
+    25n,
+  );
+  assert.equal(actionsForGrant(['profile:passport-validity'], 'travel:search'), 38n);
+  assert.equal(minorToTokenUnits(50000n), 500000000n);
+  assert.equal(tokenToMinorUnits(500000000n), 50000n);
+});
+
+test('contract mode never falls back to the local authorization store', () => {
+  const previous = process.env.NEXT_PUBLIC_ADAPTER;
+  process.env.NEXT_PUBLIC_ADAPTER = 'contract';
+  try {
+    assert.throws(() => getPermissionStore(), /local permission store is disabled/i);
+  } finally {
+    if (previous === undefined) delete process.env.NEXT_PUBLIC_ADAPTER;
+    else process.env.NEXT_PUBLIC_ADAPTER = previous;
+  }
 });
 
 test('body parser bounds payload size and does not echo private invalid inputs', async () => {

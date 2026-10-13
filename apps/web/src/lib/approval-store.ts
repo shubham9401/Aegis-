@@ -47,6 +47,13 @@ export type ApprovalResult =
     }
   | {
       approvalId: string;
+      outcome: "approved";
+      signer: Address;
+      transactionHash: `0x${string}`;
+      signedAt: number;
+    }
+  | {
+      approvalId: string;
       outcome: "rejected";
       signedAt: number;
     }
