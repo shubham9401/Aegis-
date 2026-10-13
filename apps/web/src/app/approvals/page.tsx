@@ -9,6 +9,7 @@ import { Icon } from "@/components/Icon";
 import type { ApprovalRequest } from "@/lib/approval-store";
 import type { ContractConfig } from "@/lib/aegis-contract";
 import { getAddress, type Hex } from "viem";
+import ChainDashboard from "@/components/ChainDashboard";
 
 interface StoredApproval {
   request: ApprovalRequest;
@@ -401,5 +402,7 @@ function ApprovalsPageContent() {
 
 export default function ApprovalsPage() {
   const { address } = useAuth();
-  return <ApprovalsPageContent key={address ?? "signed-out"} />;
+  return process.env.NEXT_PUBLIC_ADAPTER === "contract"
+    ? <ChainDashboard key={address ?? "signed-out"} section="approvals" />
+    : <ApprovalsPageContent key={address ?? "signed-out"} />;
 }

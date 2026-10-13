@@ -116,7 +116,7 @@ export const approvalDecisionSchema = z.union([
 
 export const agentPlanRequestSchema = z.object({
   userRequest: z.string().min(1).max(2000),
-});
+}).strict();
 
 // ─── Activity ───
 

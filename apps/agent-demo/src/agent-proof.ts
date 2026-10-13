@@ -132,7 +132,7 @@ function bytes32(value: string): Bytes32 {
 function externalKeystore(value: string): string {
   const resolved = path.resolve(value);
   const relative = path.relative(repositoryRoot, resolved);
-  if (!relative.startsWith("..") && !path.isAbsolute(relative)) {
+  if (!relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) {
     throw new Error("AEGIS_AGENT_KEYSTORE_PATH must point outside the repository");
   }
   if (!fs.existsSync(resolved)) throw new Error(`Agent keystore not found: ${resolved}`);

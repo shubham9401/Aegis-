@@ -15,7 +15,7 @@
     "demo:web": "npm run build --workspace @aegis/sdk && npm run dev:web --workspace @aegis/agent-demo",
     "demo:contracts": "npm run demo --workspace @aegis/contracts",
     "typecheck": "npm run build --workspace @aegis/sdk && npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspace @aegis/contracts && npm run build --workspace @aegis/sdk && npm run build --workspace @aegis/agent-demo && node --test packages/sdk/test/*.test.mjs && npm run test --workspace @aegis/web",
+    "test": "npm run test --workspace @aegis/contracts && npm run build --workspace @aegis/sdk && npm run build --workspace @aegis/agent-demo && node --test packages/sdk/test/*.test.mjs apps/agent-demo/test/*.test.mjs scripts/*.test.mjs && npm run test --workspace @aegis/web",
     "setup:local": "node scripts/setup-local.mjs",
     "doctor": "node scripts/readiness.mjs"
   },

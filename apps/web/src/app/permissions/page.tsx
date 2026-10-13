@@ -10,6 +10,7 @@ import { getAddress, isAddress, zeroAddress } from "viem";
 import type { DataScope } from "@aegis/sdk";
 import { CURRENCIES } from "@/lib/profile-fields";
 import { grantPermissionSchema, amountMinorSchema } from "@/lib/validation";
+import ChainDashboard from "@/components/ChainDashboard";
 
 const AVAILABLE_SCOPES = [
   "profile:dietary-preference",
@@ -416,5 +417,7 @@ function PermissionsPageContent() {
 
 export default function PermissionsPage() {
   const { address } = useAuth();
-  return <PermissionsPageContent key={address ?? "signed-out"} />;
+  return process.env.NEXT_PUBLIC_ADAPTER === "contract"
+    ? <ChainDashboard key={address ?? "signed-out"} section="policies" />
+    : <PermissionsPageContent key={address ?? "signed-out"} />;
 }
