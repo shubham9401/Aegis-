@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Contract, JsonRpcProvider } from 'ethers';
 import { runtimeConfig } from './runtime-config.mjs';
+import { kimiDiagnostic } from './kimi-diagnostic.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { web, agent } = runtimeConfig(root);
 let missing = false;
@@ -40,6 +41,7 @@ if (process.argv.includes('--live-kimi')) {
       });
       const body = await response.json();
       check(`Live Kimi completion (HTTP ${response.status}; provider content omitted)`, response.ok && body.choices?.[0]?.message?.content?.trim() === 'AEGIS_KIMI_OK');
+      if (!response.ok) console.log(`Kimi diagnosis: ${kimiDiagnostic(response.status, body)}`);
     } catch { check('Live Kimi completion (network, timeout or invalid response)', false); }
   }
 }
