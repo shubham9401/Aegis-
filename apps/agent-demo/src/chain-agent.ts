@@ -80,6 +80,16 @@ export async function runChainAgent() {
       console.log("Automatic spending blocked. Open Approvals to approve this exact extra test payment.");
       while (true) {
         if (Math.floor(Date.now() / 1000) >= deadline) throw new Error("Payment request expired");
+        // A mined one-use consent is authoritative. The off-chain queue may be
+        // unavailable after the user approves, so resume from chain state.
+        const approval = await contract.paymentApprovals!(key);
+        if (approval.permissionId === id
+          && approval.recipient.toLowerCase() === permission.paymentRecipient.toLowerCase()
+          && approval.amount === amount
+          && approval.deadline === BigInt(deadline)) {
+          console.log("Exact one-use payment approval found on Monad.");
+          break;
+        }
         const result = await api.requestChainPayment(signed);
         if (result.outcome === "approved") break;
         if (result.outcome !== "pending") throw new Error(`Payment stopped: ${result.outcome}`);
