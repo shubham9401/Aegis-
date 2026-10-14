@@ -4,7 +4,7 @@
 
 import { NextRequest } from "next/server";
 import { getPermissionAdmin } from "@/lib/permission-admin";
-import { logActivity } from "@/lib/activity-log";
+import { logActivityShared } from "@/lib/activity-log";
 import { grantPermissionSchema, addressSchema } from "@/lib/validation";
 import { apiError, parseBody } from "@/lib/utils";
 import type { Address, AgentPermission, ActionRule } from "@aegis/sdk";
@@ -46,7 +46,7 @@ async function grant(request: NextRequest) {
   const admin = getPermissionAdmin();
   const result = await admin.grant(permission);
 
-  logActivity({
+  await logActivityShared({
     user,
     agentId: parsed.agentId,
     type: "permission_created",
@@ -107,7 +107,7 @@ async function revoke(request: NextRequest) {
   }
   const result = await admin.revoke(user, agentId);
 
-  logActivity({
+  await logActivityShared({
     user,
     agentId,
     type: "permission_revoked",

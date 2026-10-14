@@ -34,9 +34,9 @@ The configured `AEGIS_AGENT_ID` must match grants and agent requests. Every agen
 
 ## Storage and deployment
 
-Run one long-lived Node process with a persistent disk. `AEGIS_DATA_DIR` holds ciphertext and policy metadata; its default is `.aegis-data` inside the web working directory and is ignored by Git. If you override it, keep it outside tracked source. Protect and back up the directory and its vault key separately. Permissions, vault values, encrypted approval queues, and sanitized activity survive restarts. Sessions and rate limits are process-local; restarting invalidates sessions.
+Local development uses one long-lived Node process with a persistent disk. `AEGIS_DATA_DIR` holds ciphertext and policy metadata; its default is `.aegis-data` inside the web working directory and is ignored by Git. If you override it, keep it outside tracked source. Protect and back up the directory and its vault key separately.
 
-This storage backend is unsuitable for ephemeral/serverless deployments or multiple replicas. Select a shared transactional database before that deployment. Set `AEGIS_APP_ORIGIN` to the exact HTTPS origin behind a reverse proxy.
+For Vercel Functions, set `AEGIS_STORAGE_BACKEND=redis` and provide `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` from a private Upstash Redis database. Login challenges, sessions, rate limits, replay nonces, encrypted vault fields, encrypted payment requests, and sanitized activity then use shared storage. The demo-only permission and legacy approval routes remain local and must not be used in a serverless deployment; use `NEXT_PUBLIC_ADAPTER=contract` and the Monad contract routes. Never put Redis credentials or the vault key in public environment variables. Set `AEGIS_APP_ORIGIN` to the exact HTTPS deployment origin; each origin gets a distinct storage namespace. A new origin also requires a new WebAuthn passkey and therefore may yield a different Mera address. Fund and grant that account separately on Monad.
 
 ## Checks
 

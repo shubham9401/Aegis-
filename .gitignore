@@ -9,4 +9,8 @@ coverage/
 Thumbs.db
 
 .aegis-data/
+.vercel/
+.vercel-cli-appdata/
+.npm-cache-vercel/
+.test-tmp/
 *.keystore.json

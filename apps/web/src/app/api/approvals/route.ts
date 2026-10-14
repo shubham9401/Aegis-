@@ -4,7 +4,7 @@
 import { NextRequest } from "next/server";
 import { createApproval, listApprovals, type ApprovalRequest } from "@/lib/approval-store";
 import { getAegisClient } from "@/lib/aegis";
-import { logActivity } from "@/lib/activity-log";
+import { logActivityShared } from "@/lib/activity-log";
 import { createApprovalSchema, addressSchema } from "@/lib/validation";
 import { apiError, parseBody } from "@/lib/utils";
 import type { Address, AgentAction } from "@aegis/sdk";
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (decision.outcome === "deny") {
-      logActivity({ user: parsed.user, agentId: parsed.agentId, type: "action_denied",
+      await logActivityShared({ user: parsed.user, agentId: parsed.agentId, type: "action_denied",
         detail: `Action denied: ${decision.reason}`, reason: decision.reason, permissionId: decision.permissionId,
         action: parsed.action, amountMinor: parsed.amountMinor });
       return apiError(403, decision.reason, "The current permission does not allow this action");
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     return apiError(reason === "REQUEST_ID_CONFLICT" ? 409 : 503, reason, "Could not create approval request");
   }
 
-  logActivity({
+  await logActivityShared({
     user: parsed.user as Address,
     agentId: parsed.agentId,
     type: "action_approval_required",

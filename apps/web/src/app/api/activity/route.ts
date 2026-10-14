@@ -2,7 +2,7 @@
 // Combines contract events (Envio if available) + denial log
 
 import { NextRequest } from "next/server";
-import { getActivity } from "@/lib/activity-log";
+import { getActivityShared } from "@/lib/activity-log";
 import { activityQuerySchema } from "@/lib/validation";
 import { apiError } from "@/lib/utils";
 import type { Address } from "@aegis/sdk";
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const { user, limit } = result.data;
   const authorization = await requireUser(request, user);
   if (authorization instanceof Response) return authorization;
-  const local = getActivity(user as Address, limit);
+  const local = await getActivityShared(user as Address, limit);
   let indexed: typeof local = [];
   let indexerAvailable = false;
   try {

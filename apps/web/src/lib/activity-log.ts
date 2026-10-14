@@ -3,6 +3,7 @@
 
 import type { Address, DecisionReason } from "@aegis/sdk";
 import { readLocalStore, writeLocalStore } from "./local-store";
+import { sharedStore, sharedStoreEnabled, storeKey } from "./shared-store";
 
 export type ActivityType =
   | "permission_created"
@@ -50,4 +51,17 @@ export function getActivity(user: Address, limit = 50): ActivityEntry[] {
     .filter((e) => e.user.toLowerCase() === user.toLowerCase())
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, limit);
+}
+
+export async function logActivityShared(entry: Omit<ActivityEntry, "id" | "timestamp">): Promise<void> {
+  if (!sharedStoreEnabled()) return logActivity(entry);
+  const redis = sharedStore();
+  const key = storeKey(`activity:${entry.user.toLowerCase()}`);
+  await redis.lpush(key, { ...entry, id: crypto.randomUUID(), timestamp: Math.floor(Date.now() / 1000) });
+  await redis.ltrim(key, 0, 9999);
+}
+
+export async function getActivityShared(user: Address, limit = 50): Promise<ActivityEntry[]> {
+  if (!sharedStoreEnabled()) return getActivity(user, limit);
+  return sharedStore().lrange<ActivityEntry>(storeKey(`activity:${user.toLowerCase()}`), 0, limit - 1);
 }

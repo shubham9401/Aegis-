@@ -6,6 +6,7 @@ import "server-only";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import type { DataScope } from "@aegis/sdk";
 import { readLocalStore, writeLocalStore } from "./local-store";
+import { sharedStore, sharedStoreEnabled, storeKey } from "./shared-store";
 
 const ALGO = "aes-256-gcm";
 const IV_LEN = 12;
@@ -133,4 +134,34 @@ export function vaultList(user: string, resourceScope?: string): { scope: DataSc
     }
   }
   return results;
+}
+
+const sharedVaultKey = (user: string, resourceScope?: string) =>
+  storeKey(`vault:${user.toLowerCase()}:${resourceScope?.toLowerCase() ?? "demo"}`);
+
+/** Serverless-safe equivalents. Each encrypted field has an independent Redis hash slot. */
+export async function vaultWriteBatchShared(user: string, entries: readonly { scope: DataScope; value: string }[], resourceScope?: string): Promise<void> {
+  if (!sharedStoreEnabled()) return vaultWriteBatch(user, entries, resourceScope);
+  const fields: Record<string, VaultEntry> = {};
+  for (const { scope, value } of entries) {
+    fields[scope] = { scope, resourceScope, ciphertext: encrypt(value, vaultKey(user, scope, resourceScope)), updatedAt: Math.floor(Date.now() / 1000) };
+  }
+  if (Object.keys(fields).length) await sharedStore().hset(sharedVaultKey(user, resourceScope), fields);
+}
+
+export async function vaultReadCiphertextShared(user: string, scope: DataScope, resourceScope?: string): Promise<string | null> {
+  if (!sharedStoreEnabled()) return vaultReadCiphertext(user, scope, resourceScope);
+  const entry = await sharedStore().hget<VaultEntry>(sharedVaultKey(user, resourceScope), scope);
+  return entry?.ciphertext ?? null;
+}
+
+export async function vaultDecryptShared(user: string, scope: DataScope, resourceScope?: string): Promise<string | null> {
+  const ciphertext = await vaultReadCiphertextShared(user, scope, resourceScope);
+  return ciphertext ? decrypt(ciphertext, vaultKey(user, scope, resourceScope)) : null;
+}
+
+export async function vaultListShared(user: string, resourceScope?: string): Promise<{ scope: DataScope; updatedAt: number }[]> {
+  if (!sharedStoreEnabled()) return vaultList(user, resourceScope);
+  const entries = await sharedStore().hgetall<Record<string, VaultEntry>>(sharedVaultKey(user, resourceScope));
+  return Object.values(entries ?? {}).map(({ scope, updatedAt }) => ({ scope, updatedAt }));
 }

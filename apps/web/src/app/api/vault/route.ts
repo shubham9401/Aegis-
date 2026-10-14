@@ -2,7 +2,7 @@
 // GET /api/vault?user=&scope= — Read ciphertext (or list scopes)
 
 import { NextRequest } from "next/server";
-import { configuredVaultResourceScope, vaultWriteBatch, vaultList, vaultReadCiphertext } from "@/lib/vault";
+import { configuredVaultResourceScope, vaultWriteBatchShared, vaultListShared, vaultReadCiphertextShared } from "@/lib/vault";
 import { vaultBatchWriteSchema, addressSchema, dataScopeSchema } from "@/lib/validation";
 import { apiError, parseBody } from "@/lib/utils";
 import type { DataScope } from "@aegis/sdk";
@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest) {
   const parsed = await parseBody(request, vaultBatchWriteSchema);
   if (parsed instanceof Response) return parsed;
 
-  try { vaultWriteBatch(user, parsed.entries, configuredVaultResourceScope()); }
+  try { await vaultWriteBatchShared(user, parsed.entries, configuredVaultResourceScope()); }
   catch { return apiError(503, "VAULT_UNAVAILABLE", "Encrypted storage is unavailable; no changes were saved"); }
 
   return Response.json({
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       return apiError(400, "INVALID_SCOPE", `Unknown scope: ${scopeRaw}`);
     }
     // Return whether the scope has stored data (no plaintext!)
-    const ciphertext = vaultReadCiphertext(user, scopeResult.data as DataScope, configuredVaultResourceScope());
+    const ciphertext = await vaultReadCiphertextShared(user, scopeResult.data as DataScope, configuredVaultResourceScope());
     return Response.json({
       scope: scopeResult.data,
       hasData: ciphertext !== null,
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   }
 
   // List all scopes for the user
-  const entries = vaultList(user, configuredVaultResourceScope());
+  const entries = await vaultListShared(user, configuredVaultResourceScope());
   return Response.json({ entries }, { headers: { "Cache-Control": "no-store" } });
   } catch { return apiError(503, "VAULT_UNAVAILABLE", "Encrypted storage is unavailable"); }
 }

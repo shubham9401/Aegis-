@@ -4,6 +4,7 @@ import { PAYMENT_REQUEST_TYPES, type ChainPaymentRequest, CHAIN_STATUS } from "@
 import { aegisAbi, livePermission } from "./chain";
 import { readLocalStore, writeLocalStore } from "./local-store";
 import { encrypt, decrypt } from "./vault";
+import { sharedStore, sharedStoreEnabled, storeKey } from "./shared-store";
 export interface StoredChainRequest extends ChainPaymentRequest { user: Address; agentId: string; rootId: string; rejected: boolean; createdAt: number }
 const binding = "aegis/chain-payment-queue/v1";
 function readQueue(): StoredChainRequest[] {
@@ -11,6 +12,13 @@ function readQueue(): StoredChainRequest[] {
   return data ? JSON.parse(decrypt(data, binding)) : [];
 }
 function save(queue: StoredChainRequest[]) { writeLocalStore("chain-payments.json", encrypt(JSON.stringify(queue), binding)); }
+const paymentKey = (rootId: string, requestId: string) => storeKey(`payment:${rootId}:${requestId.toLowerCase()}`);
+const userIndex = (user: Address) => storeKey(`payments-user:${user.toLowerCase()}`);
+function assertSameRequest(existing: StoredChainRequest, input: ChainPaymentRequest) {
+  for (const field of ["permissionId", "recipient", "amount", "deadline"] as const) {
+    if (String(existing[field]).toLowerCase() !== String(input[field]).toLowerCase()) throw new Error("Request ID conflict");
+  }
+}
 export async function authenticatePayment(input: ChainPaymentRequest, audience: string) {
   const live = await livePermission(BigInt(input.permissionId));
   const { permission: p, status, config } = live;
@@ -30,14 +38,32 @@ export function enqueuePayment(input: ChainPaymentRequest, user: Address, agentI
   const queue = readQueue().filter((q) => q.deadline > now - 86400);
   const existing = queue.find((q) => q.rootId === String(rootId) && q.requestId.toLowerCase() === input.requestId.toLowerCase());
   if (existing) {
-    for (const field of ["permissionId", "recipient", "amount", "deadline"] as const) {
-      if (String(existing[field]).toLowerCase() !== String(input[field]).toLowerCase()) throw new Error("Request ID conflict");
-    }
+    assertSameRequest(existing, input);
     return existing;
   }
   if (queue.length >= 500) throw new Error("Payment queue capacity reached");
   const entry = { ...input, user, agentId: String(agentId), rootId: String(rootId), rejected: false, createdAt: now };
   queue.push(entry); save(queue); return entry;
+}
+export async function enqueuePaymentShared(input: ChainPaymentRequest, user: Address, agentId: bigint, rootId: bigint): Promise<StoredChainRequest> {
+  if (!sharedStoreEnabled()) return enqueuePayment(input, user, agentId, rootId);
+  const redis = sharedStore();
+  const key = paymentKey(String(rootId), input.requestId);
+  const now = Math.floor(Date.now() / 1000);
+  const entry: StoredChainRequest = { ...input, user, agentId: String(agentId), rootId: String(rootId), rejected: false, createdAt: now };
+  const accepted = await redis.set(key, encrypt(JSON.stringify(entry), binding), { nx: true, ex: 86400 });
+  if (accepted !== "OK") {
+    const raw = await redis.get<string>(key);
+    if (!raw) throw new Error("Payment request race; retry");
+    const existing = JSON.parse(decrypt(raw, binding)) as StoredChainRequest;
+    assertSameRequest(existing, input);
+    return existing;
+  }
+  const index = userIndex(user);
+  await redis.zadd(index, { score: now, member: key });
+  await redis.zremrangebyrank(index, 0, -501);
+  await redis.expire(index, 86400);
+  return entry;
 }
 export function rejectPayment(user: Address, requestId: string) {
   const queue = readQueue();
@@ -45,6 +71,22 @@ export function rejectPayment(user: Address, requestId: string) {
   if (!entries.length) throw new Error("Request not found");
   for (const entry of entries) entry.rejected = true;
   save(queue);
+}
+export async function rejectPaymentShared(user: Address, requestId: string): Promise<void> {
+  if (!sharedStoreEnabled()) return rejectPayment(user, requestId);
+  const redis = sharedStore();
+  const keys = await redis.zrange<string[]>(userIndex(user), 0, -1);
+  let found = false;
+  for (const key of keys) {
+    const raw = await redis.get<string>(key);
+    if (!raw) continue;
+    const entry = JSON.parse(decrypt(raw, binding)) as StoredChainRequest;
+    if (entry.requestId.toLowerCase() !== requestId.toLowerCase() || entry.user.toLowerCase() !== user.toLowerCase()) continue;
+    entry.rejected = true;
+    await redis.set(key, encrypt(JSON.stringify(entry), binding), { xx: true, ex: Math.max(60, entry.deadline - Math.floor(Date.now() / 1000) + 86400) });
+    found = true;
+  }
+  if (!found) throw new Error("Request not found");
 }
 export async function paymentState(entry: StoredChainRequest) {
   const { client, config, permission, status } = await livePermission(BigInt(entry.permissionId));
@@ -60,7 +102,15 @@ export async function paymentState(entry: StoredChainRequest) {
   return { ...entry, outcome };
 }
 export async function listChainPayments(user: Address) {
-  const entries = readQueue().filter((q) => q.user.toLowerCase() === user.toLowerCase()).sort((a, b) => b.createdAt - a.createdAt).slice(0, 50);
+  let entries: StoredChainRequest[];
+  if (sharedStoreEnabled()) {
+    const redis = sharedStore();
+    const keys = await redis.zrange<string[]>(userIndex(user), 0, 49, { rev: true });
+    const values = await Promise.all(keys.map((key) => redis.get<string>(key)));
+    entries = values.filter((value): value is string => Boolean(value)).map((value) => JSON.parse(decrypt(value, binding)) as StoredChainRequest);
+  } else {
+    entries = readQueue().filter((q) => q.user.toLowerCase() === user.toLowerCase()).sort((a, b) => b.createdAt - a.createdAt).slice(0, 50);
+  }
   // Bound concurrent RPC traffic on the public testnet endpoint.
   const result = [];
   for (const entry of entries) result.push(await paymentState(entry));

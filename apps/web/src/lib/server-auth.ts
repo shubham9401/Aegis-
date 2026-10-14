@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getAddress, verifyMessage, verifyTypedData, type Address } from "viem";
 import { z } from "zod";
 import { readLocalStore, writeLocalStore } from "./local-store";
+import { sharedStore, sharedStoreEnabled, storeKey } from "./shared-store";
 
 // Single-process deployment only: restarts invalidate sessions, never authenticate them.
 const globals = globalThis as typeof globalThis & { __aegisAuth?: {
@@ -35,7 +36,14 @@ function prune() {
     for (const [key, value] of map) if (value.expires <= now) map.delete(key);
   }
 }
-export function authRateLimit(key: string, limit = 30): Response | null {
+export async function authRateLimit(key: string, limit = 30): Promise<Response | null> {
+  if (sharedStoreEnabled()) {
+    const redis = sharedStore();
+    const bucket = storeKey(`rate:${key}:${Math.floor(Date.now() / 60000)}`);
+    const count = await redis.incr(bucket);
+    if (count === 1) await redis.expire(bucket, 120);
+    return count > limit ? authError("RATE_LIMITED", "Too many requests. Try again in a minute.", 429) : null;
+  }
   prune();
   const record = state.rates.get(key) ?? { count: 0, expires: Date.now() + 60_000 };
   record.count++;
@@ -46,13 +54,16 @@ export function authRateLimit(key: string, limit = 30): Response | null {
 export async function requireUser(request: Request, expectedAddress?: string): Promise<Address | Response> {
   const origin = checkOrigin(request, !["GET", "HEAD"].includes(request.method));
   if (origin) return origin;
-  prune();
-  const session = state.sessions.get(cookie(request, SESSION) || "");
+  if (!sharedStoreEnabled()) prune();
+  const sessionId = cookie(request, SESSION) || "";
+  const session = sharedStoreEnabled()
+    ? sessionId ? await sharedStore().get<{ address: Address; expires: number }>(storeKey(`session:${sessionId}`)) : null
+    : state.sessions.get(sessionId);
   if (!session) return authError("UNAUTHENTICATED", "Sign in with your passkey.", 401);
   if (expectedAddress && expectedAddress.toLowerCase() !== session.address.toLowerCase()) {
     return authError("FORBIDDEN", "The authenticated account does not own this resource.", 403);
   }
-  return authRateLimit(`user:${session.address}`, 120) ?? session.address;
+  return await authRateLimit(`user:${session.address}`, 120) ?? session.address;
 }
 export async function requireAgent(request: Request): Promise<string | Response> {
   const origin = checkOrigin(request);
@@ -64,7 +75,7 @@ export async function requireAgent(request: Request): Promise<string | Response>
   if (a.length !== b.length || !timingSafeEqual(a, b)) return authError("UNAUTHENTICATED_AGENT", "A valid agent bearer token is required.", 401);
   const agentId = process.env.AEGIS_AGENT_ID;
   if (!agentId) return authError("AGENT_AUTH_UNCONFIGURED", "Configure the agreed AEGIS_AGENT_ID.", 503);
-  return authRateLimit(`agent:${agentId}`, 60) ?? agentId;
+  return await authRateLimit(`agent:${agentId}`, 60) ?? agentId;
 }
 
 const agentProofTypes = {
@@ -154,17 +165,20 @@ export async function requireContractAgent(
   } catch { /* Invalid typed data fails closed. */ }
   if (!valid) return authError("INVALID_AGENT_PROOF", "Agent signature does not match the ERC-8004 owner.", 401);
 
-  const used = readLocalStore<Record<string, number>>("agent-request-nonces.json", {});
-  const nowNumber = Number(now);
-  for (const [id, expires] of Object.entries(used)) if (expires <= nowNumber) delete used[id];
   const replayKey = `${configuredAgentId}:${requestId.toLowerCase()}`;
-  if (used[replayKey]) return authError("AGENT_PROOF_REPLAY", "Agent request ID has already been used.", 409);
-  used[replayKey] = Number(deadline);
-  if (Object.keys(used).length > 10_000) {
-    return authError("RATE_LIMITED", "Agent proof capacity reached. Try again shortly.", 429);
+  if (sharedStoreEnabled()) {
+    const accepted = await sharedStore().set(storeKey(`agent-nonce:${replayKey}`), "used", { nx: true, ex: Number(deadline - now) });
+    if (accepted !== "OK") return authError("AGENT_PROOF_REPLAY", "Agent request ID has already been used.", 409);
+  } else {
+    const used = readLocalStore<Record<string, number>>("agent-request-nonces.json", {});
+    const nowNumber = Number(now);
+    for (const [id, expires] of Object.entries(used)) if (expires <= nowNumber) delete used[id];
+    if (used[replayKey]) return authError("AGENT_PROOF_REPLAY", "Agent request ID has already been used.", 409);
+    used[replayKey] = Number(deadline);
+    if (Object.keys(used).length > 10_000) return authError("RATE_LIMITED", "Agent proof capacity reached. Try again shortly.", 429);
+    writeLocalStore("agent-request-nonces.json", used);
   }
-  writeLocalStore("agent-request-nonces.json", used);
-  return authRateLimit(`agent:${configuredAgentId}`, 60) ?? configuredAgentId;
+  return await authRateLimit(`agent:${configuredAgentId}`, 60) ?? configuredAgentId;
 }
 const addressSchema = z.object({ address: z.string().regex(/^0x[0-9a-fA-F]{40}$/) }).strict();
 const proofSchema = addressSchema.extend({ signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/) }).strict();
@@ -187,18 +201,22 @@ const options = (request: Request, maxAge: number) => ({ httpOnly: true, sameSit
 export async function createChallenge(request: Request): Promise<Response> {
   const origin = checkOrigin(request, true);
   if (origin) return origin;
-  const rate = authRateLimit(`login:${request.headers.get("x-forwarded-for") || "local"}`, 20);
+  const rate = await authRateLimit(`login:${request.headers.get("x-forwarded-for") || "local"}`, 20);
   if (rate) return rate;
   const body = addressSchema.safeParse(await authBody(request));
   if (!body.success) return authError("INVALID_REQUEST", "A valid account address is required.", 400);
-  if (state.challenges.size >= 1000) return authError("RATE_LIMITED", "Login capacity reached. Try again shortly.", 429);
+  if (!sharedStoreEnabled() && state.challenges.size >= 1000) return authError("RATE_LIMITED", "Login capacity reached. Try again shortly.", 429);
   const address = getAddress(body.data.address), id = randomBytes(32).toString("hex");
   const old = cookie(request, CHALLENGE);
-  if (old) state.challenges.delete(old);
+  if (old) {
+    if (sharedStoreEnabled()) await sharedStore().del(storeKey(`challenge:${old}`));
+    else state.challenges.delete(old);
+  }
   const site = process.env.AEGIS_APP_ORIGIN || new URL(request.url).origin;
   const expires = Date.now() + 120_000;
   const message = `Aegis sign-in\nOrigin: ${site}\nAccount: ${address}\nNonce: ${id}\nExpires: ${new Date(expires).toISOString()}\nSign only to authenticate to Aegis. This grants no transaction permission.`;
-  state.challenges.set(id, { address, message, origin: site, expires });
+  if (sharedStoreEnabled()) await sharedStore().set(storeKey(`challenge:${id}`), { address, message, origin: site, expires }, { ex: 120 });
+  else state.challenges.set(id, { address, message, origin: site, expires });
   const response = NextResponse.json({ message }, { headers: { "Cache-Control": "no-store" } });
   response.cookies.set(CHALLENGE, id, options(request, 120));
   return response;
@@ -207,8 +225,10 @@ export async function verifyChallenge(request: Request): Promise<Response> {
   const origin = checkOrigin(request, true);
   if (origin) return origin;
   const id = cookie(request, CHALLENGE) || "";
-  const challenge = state.challenges.get(id);
-  state.challenges.delete(id); // Consume before await: a proof cannot race or replay.
+  const challenge = sharedStoreEnabled()
+    ? id ? await sharedStore().getdel<{ address: Address; message: string; origin: string; expires: number }>(storeKey(`challenge:${id}`)) : null
+    : state.challenges.get(id);
+  if (!sharedStoreEnabled()) state.challenges.delete(id); // Consume before await.
   const body = proofSchema.safeParse(await authBody(request));
   if (!challenge || challenge.origin !== (process.env.AEGIS_APP_ORIGIN || new URL(request.url).origin) || challenge.expires <= Date.now() || !body.success || challenge.address.toLowerCase() !== body.data.address.toLowerCase()) {
     return authError("INVALID_PROOF", "Sign-in challenge is missing, expired, or invalid. Start sign-in again.", 401);
@@ -216,12 +236,18 @@ export async function verifyChallenge(request: Request): Promise<Response> {
   let valid = false;
   try { valid = await verifyMessage({ address: challenge.address, message: challenge.message, signature: body.data.signature as `0x${string}` }); } catch { /* Invalid proofs fail closed. */ }
   if (!valid) return authError("INVALID_PROOF", "Signature does not match this account.", 401);
-  prune();
-  if (state.sessions.size >= 10_000) return authError("RATE_LIMITED", "Session capacity reached.", 429);
+  if (!sharedStoreEnabled()) {
+    prune();
+    if (state.sessions.size >= 10_000) return authError("RATE_LIMITED", "Session capacity reached.", 429);
+  }
   const old = cookie(request, SESSION);
-  if (old) state.sessions.delete(old);
+  if (old) {
+    if (sharedStoreEnabled()) await sharedStore().del(storeKey(`session:${old}`));
+    else state.sessions.delete(old);
+  }
   const session = randomBytes(32).toString("hex");
-  state.sessions.set(session, { address: challenge.address, expires: Date.now() + TTL * 1000 });
+  if (sharedStoreEnabled()) await sharedStore().set(storeKey(`session:${session}`), { address: challenge.address, expires: Date.now() + TTL * 1000 }, { ex: TTL });
+  else state.sessions.set(session, { address: challenge.address, expires: Date.now() + TTL * 1000 });
   const response = NextResponse.json({ address: challenge.address }, { headers: { "Cache-Control": "no-store" } });
   response.cookies.set(SESSION, session, options(request, TTL));
   response.cookies.set(CHALLENGE, "", options(request, 0));
@@ -230,8 +256,14 @@ export async function verifyChallenge(request: Request): Promise<Response> {
 export async function endSession(request: Request): Promise<Response> {
   const origin = checkOrigin(request, true);
   if (origin) return origin;
-  state.sessions.delete(cookie(request, SESSION) || "");
-  state.challenges.delete(cookie(request, CHALLENGE) || "");
+  if (sharedStoreEnabled()) {
+    const session = cookie(request, SESSION), challenge = cookie(request, CHALLENGE);
+    if (session) await sharedStore().del(storeKey(`session:${session}`));
+    if (challenge) await sharedStore().del(storeKey(`challenge:${challenge}`));
+  } else {
+    state.sessions.delete(cookie(request, SESSION) || "");
+    state.challenges.delete(cookie(request, CHALLENGE) || "");
+  }
   const response = NextResponse.json({ ok: true });
   response.cookies.set(SESSION, "", options(request, 0));
   response.cookies.set(CHALLENGE, "", options(request, 0));

@@ -3,8 +3,8 @@
 
 import { NextRequest } from "next/server";
 import { getAegisClient } from "@/lib/aegis";
-import { vaultDecrypt } from "@/lib/vault";
-import { logActivity } from "@/lib/activity-log";
+import { vaultDecryptShared } from "@/lib/vault";
+import { logActivityShared } from "@/lib/activity-log";
 import { contextQuerySchema, dataScopeSchema } from "@/lib/validation";
 import { apiError } from "@/lib/utils";
 import { CONTRACT_DATA_ACTION, type Address, type DataScope } from "@aegis/sdk";
@@ -63,7 +63,7 @@ export async function GET(
       const status = chainDecision.contractStatus === undefined
         ? ""
         : ` (contract status ${chainDecision.contractStatus})`;
-      logActivity({
+      await logActivityShared({
         user: user as Address,
         agentId,
         type: "data_denied",
@@ -77,11 +77,11 @@ export async function GET(
 
     // The encrypted record is bound to the exact opaque scope read from the
     // live grant. Decryption happens only after the final on-chain check.
-    const plaintext = vaultDecrypt(user, scope, chainDecision.resourceScope);
+    const plaintext = await vaultDecryptShared(user, scope, chainDecision.resourceScope);
     if (plaintext === null) {
       return apiError(404, "DATA_NOT_FOUND", `No data stored for scope "${scope}"`);
     }
-    logActivity({
+    await logActivityShared({
       user: user as Address,
       agentId,
       type: "data_released",
@@ -107,12 +107,12 @@ export async function GET(
       requestedAt: Math.floor(Date.now() / 1000),
       scope,
     },
-    async (approvedScope) => vaultDecrypt(user, approvedScope),
+    async (approvedScope) => vaultDecryptShared(user, approvedScope),
   );
   const { decision } = result;
 
   if (decision.outcome !== "allow") {
-    logActivity({
+    await logActivityShared({
       user: user as Address,
       agentId,
       type: "data_denied",
@@ -129,7 +129,7 @@ export async function GET(
     return apiError(404, "DATA_NOT_FOUND", `No data stored for scope "${scope}"`);
   }
 
-  logActivity({
+  await logActivityShared({
     user: user as Address,
     agentId,
     type: "data_released",

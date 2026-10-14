@@ -2,7 +2,7 @@
 
 import { NextRequest } from "next/server";
 import { decideApproval, getApproval } from "@/lib/approval-store";
-import { logActivity } from "@/lib/activity-log";
+import { logActivityShared } from "@/lib/activity-log";
 import { approvalDecisionSchema } from "@/lib/validation";
 import { apiError, parseBody } from "@/lib/utils";
 import type { Address } from "@aegis/sdk";
@@ -97,7 +97,7 @@ export async function POST(
     return apiError(409, "DECIDE_FAILED", "Could not process decision");
   }
 
-  logActivity({
+  await logActivityShared({
     user: existing.request.user,
     agentId: existing.request.agentId,
     type: parsed.outcome === "approved" ? "approval_approved" : "approval_rejected",
